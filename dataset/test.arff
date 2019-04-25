@@ -1,7 +1,7 @@
 @relation ecoli1
 @attribute Mcg real [0.0, 0.89]
 @attribute Gvh real [0.16, 1.0]
-@attribute Class {positive, negative}   
+@attribute Class {positive, negative, zero}   
 @data
 0, 0, negative    
  0, 1, negative    
@@ -13,3 +13,5 @@
 3, 4, negative
 5, 3, negative
 1, -1, negative
+1,2,positive
+3,4,zero
