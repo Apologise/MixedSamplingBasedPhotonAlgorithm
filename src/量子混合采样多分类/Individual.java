@@ -26,6 +26,9 @@ public class Individual {
 		handledInstances = new ArrayList<Instance>();
 		flag = new int[instancesSet.majorityInstances.size()];
 		phase = new Phase[instancesSet.majorityInstances.size()];
+		for(int i = 0; i < instancesSet.majorityInstances.size(); ++i) {
+			phase[i] = new Phase();
+		}
 	}
 	/*
 	 * TODO: 计算个体的适应度

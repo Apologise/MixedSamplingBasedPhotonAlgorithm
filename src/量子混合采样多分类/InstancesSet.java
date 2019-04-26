@@ -1,13 +1,11 @@
 package 量子混合采样多分类;
 
 import java.util.ArrayList;
-import java.util.FormatFlagsConversionMismatchException;
+
 import java.util.List;
 
 import weka.core.Instance;
 import weka.core.Instances;
-import weka.core.neighboursearch.NearestNeighbourSearch;
-import weka.core.pmml.Constant;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Normalize;
 
@@ -208,9 +206,7 @@ public class InstancesSet {
 	}
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
-		Setting setting = new Setting(200, 5, 5);
-		InstancesSet instancesSet = new InstancesSet("dataset/pima.arff", setting);
-		instancesSet.initializeInstancesSet();
+	
 
 	
 	}

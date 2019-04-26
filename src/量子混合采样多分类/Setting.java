@@ -6,10 +6,12 @@ public class Setting {
 	public int noisyK;
 	public int popSize;
 	public int iteration;
-	public Setting(int T, int K, int noisyK) {
+	public Setting(int T, int K, int noisyK, int popSize, int iteration) {
 		this.T = T;
 		this.K = K;
 		this.noisyK = noisyK;
+		this.popSize = popSize;
+		this.iteration = iteration;
 	}
 	public static void test() {}
 }
