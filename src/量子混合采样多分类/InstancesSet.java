@@ -11,10 +11,13 @@ import weka.core.pmml.Constant;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Normalize;
 
+/*
+ * InstancesSet类实例用于保存各种类型的样本集合
+ * InstancesSet实例变量一旦调用initializeInstancesSet()后，里面的变量都不会被其他对象修改
+ * */
 public class InstancesSet {
 	public final String filePath;
 	public Instances rawInstances;	//未经任何处理的原始数据
-	
 	public List<Instance> originInstances;	//经过了归一化、标准化和去除了噪声的数据
 	public List<List<Double>> distanceMatrix;	//存放样本之间的距离矩阵
 	public int noisyK;	//判定是否为噪声的参数K
@@ -22,9 +25,9 @@ public class InstancesSet {
 	public List<Instance> minorityInstances;
 	public List<List<Instance>> instancesByClass;
 	
-	public InstancesSet(String filePath) {
-		this.noisyK = Setting.noisyK;
+	public InstancesSet(String filePath, Setting setting) {
 	    this.filePath = filePath;
+	    noisyK = setting.K;
 	}
 	
 	/*
@@ -41,10 +44,11 @@ public class InstancesSet {
 		normalizeInstances(rawInstances);
 		removeNoiseInstance();
 		//将移除噪声后的数据集的样本加入到originInstances集合中
+		originInstances = new ArrayList<>();
 		for(int i = 0; i < rawInstances.size(); ++i) {
 			originInstances.add(rawInstances.get(i));
 		}
-		//获得移除噪声后的距离矩阵
+		//获得移除噪声后的距离矩阵(因为样本会减少，因此样本矩阵的行列也会变化)
 		initializeDistanceMatrixAfterRemoveNoise(originInstances);
 		//根据类标将整个原始数据集进行拆分存放于instancesByClass
 		instancesByClass = new ArrayList<List<Instance>>();
@@ -63,10 +67,11 @@ public class InstancesSet {
 				minorityInstances.add(inst);
 			}
 		}
+		System.out.println("InstancesSet对象初始化结束\n");
 	}
 	/*
 	 * TODO: 将从文件中读取的数据规范化
-	 * RETURN: 得到一个规范化的数据集，然后付给orginInstances;
+	 * RETURN: 得到一个规范化的数据集
 	 * */
 	public void normalizeInstances(Instances rawInstances) throws Exception {
 		Normalize normalizer = new Normalize();
@@ -91,7 +96,6 @@ public class InstancesSet {
 	}
 	
 	public void initializeDistanceMatrixAfterRemoveNoise(List<Instance> instances) {
-
 		for(Instance first: instances) {
 			List<Double> rawDistance = new ArrayList<>();
 			for(Instance second: instances) {
@@ -112,8 +116,6 @@ public class InstancesSet {
 	 * RETURN：返回一个噪声样本集合
 	 * */
 	public void removeNoiseInstance() {
-		//计算距离矩阵
-		List<List<Double>> distanceMatrix = initializeDistanceMatrix(rawInstances);
 		List<Instance> noisyInstances = new ArrayList<>();
 		for(int i = 0; i < rawInstances.size(); ++i) {
 			//计算第i个样本的k近邻
@@ -176,7 +178,7 @@ public class InstancesSet {
 	
 	/*
 	 * TODO:按照类标对整个数据集进行拆分
-	 * RETURN:拆分后返回Instances类型的instancesByClass[]数组，数组下标为类标
+	 * RETURN:拆分后修改List<List<Instances>>类型的对象instancesByClass，第一维的访问下标即为类标
 	 * */
 	public void splitByClass() {
 		for(Instance inst: originInstances) {
@@ -206,7 +208,9 @@ public class InstancesSet {
 	}
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
-		InstanceDao instanceDao = new InstanceDao();
+		Setting setting = new Setting(200, 5, 5);
+		InstancesSet instancesSet = new InstancesSet("dataset/pima.arff", setting);
+		instancesSet.initializeInstancesSet();
 
 	
 	}
