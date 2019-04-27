@@ -1,8 +1,11 @@
 package 量子混合采样多分类;
 
 import java.util.ArrayList;
-
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import weka.core.Instance;
 import weka.core.Instances;
@@ -20,8 +23,10 @@ public class InstancesSet {
 	public List<List<Double>> distanceMatrix;	//存放样本之间的距离矩阵
 	public int noisyK;	//判定是否为噪声的参数K
 	public List<Instance> majorityInstances;
+	public List<Double> weightOfMajorityInstance;	//多数类样本的权重
 	public List<Instance> minorityInstances;
 	public List<List<Instance>> instancesByClass;
+	public Set<Integer> minorityClassLabel;
 	
 	public InstancesSet(String filePath, Setting setting) {
 	    this.filePath = filePath;
@@ -39,7 +44,7 @@ public class InstancesSet {
 		distanceMatrix = new ArrayList<List<Double>>();
 		initializeDistanceMatrix(rawInstances);
 		//将数据集进行归一化
-		normalizeInstances(rawInstances);
+	//	rawInstances = normalizeInstances(rawInstances);
 		removeNoiseInstance();
 		//将移除噪声后的数据集的样本加入到originInstances集合中
 		originInstances = new ArrayList<>();
@@ -54,6 +59,7 @@ public class InstancesSet {
 			List<Instance> temp = new ArrayList<>();
 			instancesByClass.add(temp);
 		}
+		minorityClassLabel = new HashSet<>();
 		splitByClass();
 		//将origin集合划分为多数类和少数类样本
 		majorityInstances = new ArrayList<>();
@@ -65,16 +71,19 @@ public class InstancesSet {
 				minorityInstances.add(inst);
 			}
 		}
+		weightOfMajorityInstance = new ArrayList<>();
+		calWeight();
 		System.out.println("InstancesSet对象初始化结束\n");
 	}
 	/*
 	 * TODO: 将从文件中读取的数据规范化
 	 * RETURN: 得到一个规范化的数据集
 	 * */
-	public void normalizeInstances(Instances rawInstances) throws Exception {
+	public Instances normalizeInstances(Instances instances) throws Exception {
 		Normalize normalizer = new Normalize();
-		normalizer.setInputFormat(rawInstances);
-		rawInstances = Filter.useFilter(rawInstances, normalizer);
+		normalizer.setInputFormat(instances);
+		instances = Filter.useFilter(rawInstances, normalizer);
+		return instances;
 	}
 	
 	public List<List<Double>> initializeDistanceMatrix(Instances rawInstances) {
@@ -94,7 +103,9 @@ public class InstancesSet {
 	}
 	
 	public void initializeDistanceMatrixAfterRemoveNoise(List<Instance> instances) {
+		distanceMatrix.clear();
 		for(Instance first: instances) {
+
 			List<Double> rawDistance = new ArrayList<>();
 			for(Instance second: instances) {
 				if(first == second) {
@@ -165,7 +176,7 @@ public class InstancesSet {
 			double diff = first.value(i) - second.value(i);
 			distance += diff*diff;
 		}
-		return distance;
+		return Math.sqrt(distance);
 	}
 	
 	public static void printInstances(Instances Instances) {
@@ -202,12 +213,57 @@ public class InstancesSet {
 		if(theSizeOfClassLabel > averageSize) {
 			flag = true;
 		}
+		if(flag == false) {
+			minorityClassLabel.add(classLabel);
+		}
 		return flag;
+	}
+	
+	/*
+	 * TODO: 计算多数类样本集合中每一个样本的权重
+	 * */
+	public void calWeight() {
+		for(int i = 0; i < majorityInstances.size(); ++i) {
+			Instance inst1 = majorityInstances.get(i);
+			int classLabel1 = (int)inst1.classValue();
+			//获得inst1在originInstances中的下标
+			int indexInOriginList = originInstances.indexOf(inst1);
+			List<Double> distance = distanceMatrix.get(indexInOriginList);
+			//求多数类样本inst到其他类样本的最近距离
+			double minDis = 0x3fffffff;
+			for(int j = 0; j < distance.size(); ++j) {
+				try{
+				Instance inst2 = originInstances.get(j);
+				int classLabel2 = (int)inst2.classValue();
+				if(classLabel2 != classLabel1 && minDis > distance.get(j)) {
+					minDis = distance.get(j);
+				}
+				}catch(Exception e) {
+					System.out.println();
+				}
+				
+			}
+			weightOfMajorityInstance.add(minDis);
+		}
+		//将权重归一化
+		double min = 0x3fffffff, max = -1;
+		for(int i = 0; i<weightOfMajorityInstance.size(); ++i) {
+			double tempValue = weightOfMajorityInstance.get(i);
+			if(tempValue < min) {
+				min = tempValue;
+			}
+			if(tempValue > max) {
+				max = tempValue;
+			}
+		}
+		for(int i = 0; i<weightOfMajorityInstance.size(); ++i) {
+			double tempValue = weightOfMajorityInstance.get(i);
+			double updateVaue = (tempValue - min)/(max-min);
+			weightOfMajorityInstance.set(i, updateVaue);
+		}
 	}
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
-	
-
-	
+		
 	}
 }
