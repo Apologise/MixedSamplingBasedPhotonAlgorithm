@@ -27,6 +27,7 @@ public class InstancesSet {
 	public List<Instance> minorityInstances;
 	public List<List<Instance>> instancesByClass;
 	public Set<Integer> minorityClassLabel;
+	public Instances trainInstances;
 	
 	public InstancesSet(String filePath, Setting setting) {
 	    this.filePath = filePath;
