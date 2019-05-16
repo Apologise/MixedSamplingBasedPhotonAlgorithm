@@ -30,7 +30,7 @@ public class GenerateSample {
 				double[] values = new double[inputData.numAttributes()];
 				for(int j = 0; j < inputData.numAttributes()-1; ++j) {
 					double gap = Math.random();
-					int indexK = (int)(gap*setting.K+0.5);
+					int indexK = (int)(gap*setting.K);
 					/*
 					if(gap<0.2) {
 						gap = 0.2;
@@ -43,6 +43,7 @@ public class GenerateSample {
 				}
 				values[inputData.numAttributes()-1] = inputData.get(0).classValue();
 				output.add(inputData.get(0).copy(values));
+				IR--;
 		}
 	}
 	

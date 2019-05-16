@@ -8,6 +8,10 @@ import java.util.Set;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
+import weka.classifiers.bayes.NaiveBayes;
+import weka.classifiers.functions.MultilayerPerceptron;
+import weka.classifiers.functions.SMO;
+import weka.classifiers.lazy.IBk;
 import weka.classifiers.trees.J48;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -68,9 +72,11 @@ public class Individual {
 		for(Instance inst: handledInstances) {
 			newInstances.add(inst);
 		}
-		Classifier classifier = new J48();
+		Classifier classifier = new NaiveBayes();
 		classifier.buildClassifier(newInstances);
 		Evaluation evaluation = new Evaluation(newInstances);
+		evaluation.evaluateModel(classifier, instancesSet.validateInstances);
+		fitness = evaluation.areaUnderROC(0);
 	}
 	
 	/*
@@ -78,14 +84,18 @@ public class Individual {
 	 * RETURN：返回一个经过处理后的样本集合
 	 * */
 	public void mixedSampling() {
-		//先清空handledInstances集合
+		//先清空handledInstances集合和handledMajorityInstances集合
 		handledInstances.clear();
+		handledMajorityInstances.clear();
 		//将少数类样本加入到handledInstnaces中
 		for(Instance inst: instancesSet.minorityInstances) {
 			handledInstances.add(inst);
 		}
+//		System.out.println("原始的少数类样本个数:"+handledInstances.size()+"原始多数类样本个数："+instancesSet.majorityInstances.size());
 		underSampling();
+//		System.out.println("处理后多数类样本个数为："+handledMajorityInstances.size());
 		overSampling();
+	//	System.out.println("处理后样本个数为"+handledInstances.size());
 	}
 	
 
@@ -113,11 +123,15 @@ public class Individual {
 		Iterator<Integer> iterator = labels.iterator();
 		GenerateSample generator = new GenerateSample(setting);
 		List<Instance> output = new ArrayList<>();
-		int average = instancesSet.originInstances.size()/instancesSet.rawInstances.numClasses();
-
+		int average = handledMajorityInstances.size()/instancesSet.rawInstances.numClasses();
+	//	System.out.println("平均样本个数为："+average);
 		while(iterator.hasNext()) {
 			int label = iterator.next();
 			List<Instance> instances = instancesSet.instancesByClass.get(label);
+			//如果少数类样本多于平均的样本数量，那么就不需要进行过采样
+			if(instances.size() > average) {
+				return;
+			}
 			int[] n = calInstanceToGenerate(instancesSet.minorityInstances, average);
 			//针对instances进行过采样
 			Instances tempInstancesMajority = new Instances(instancesSet.rawInstances);
@@ -131,9 +145,11 @@ public class Individual {
 				tempInstancesMinority.add(inst);
 			}
 			for(int i = 0; i < instances.size(); ++i) {
+
 				generator.generateSample(instances.get(i), tempInstancesMinority, tempInstancesMajority, output, n[i]);
 			}
 		}
+//		System.out.println("生成的样本个数为："+output.size());
 		//将生成的样本加入到handleInstances中
 		for(Instance inst: output) {
 			handledInstances.add(inst);
@@ -156,9 +172,6 @@ public class Individual {
 
 		int reminder = generatesize - (int) Math.floor(generatesize / minoritySize) * minoritySize;
 		// println(minoritySamples.size());
-		// println(reminder);
-
-		// println("reminder:" + reminder);
 		for (int i = 0; i < reminder;) {
 			Random rand = new Random();
 			int index = rand.nextInt(minoritySize);
@@ -183,7 +196,6 @@ public class Individual {
 	public void watchByPhase() {
 		List<Double> weight = instancesSet.weightOfMajorityInstance;
 		for(int i = 0; i < phase.length; ++i) {
-			System.out.println(weight.get(i));
 			double rand = Math.random();
 			if(phase[i].alpha*phase[i].alpha < rand) {
 				flag[i] = 1;
@@ -193,11 +205,14 @@ public class Individual {
 	
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
-		Setting setting  = new Setting(100, 4, 4, 10, 200, 30);
-		InstancesSet instancesSet = new InstancesSet("dataset/test.arff", setting);
-		instancesSet.initializeInstancesSet();
+		Setting setting  = new Setting(100, 4, 4, 10, 30);
+		InstancesSet instancesSet = new InstancesSet("pima", setting);
+	//	instancesSet.initializeInstancesSet();
 		Individual individual = new Individual(setting, instancesSet);
 		individual.initializeIndividual();
 		individual.watchByPhase();
+		individual.mixedSampling();
+		individual.calFitness();
+		System.out.println(individual.fitness);
 	}
 }

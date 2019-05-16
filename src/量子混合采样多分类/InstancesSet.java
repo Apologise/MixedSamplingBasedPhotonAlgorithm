@@ -17,7 +17,7 @@ import weka.filters.unsupervised.attribute.Normalize;
  * InstancesSet实例变量一旦调用initializeInstancesSet()后，里面的变量都不会被其他对象修改
  * */
 public class InstancesSet {
-	public final String filePath;
+	public final String fileName;
 	public Instances rawInstances;	//未经任何处理的原始数据
 	public List<Instance> originInstances;	//经过了归一化、标准化和去除了噪声的数据
 	public List<List<Double>> distanceMatrix;	//存放样本之间的距离矩阵
@@ -27,20 +27,25 @@ public class InstancesSet {
 	public List<Instance> minorityInstances;
 	public List<List<Instance>> instancesByClass;
 	public Set<Integer> minorityClassLabel;
-	public Instances trainInstances;
+	public Instances validateInstances;
+	public List<Double> margin;
+	public int fold;
 	
-	public InstancesSet(String filePath, Setting setting) {
-	    this.filePath = filePath;
-	    noisyK = setting.K;
+	public InstancesSet(String fileName, Setting setting) {
+	    this.fileName = fileName;
+	    noisyK = setting.noisyK;
 	}
 	
 	/*
 	 * TODO:初始化InstancesSet对象中的majrotityInstances, instancesByClass成员
 	 * RETURN： 返回初始化后的成员变量
 	 * */
-	public void initializeInstancesSet() throws Exception {
+	public void initializeInstancesSet(int curFold) throws Exception {
 		InstanceDao instanceDao = new InstanceDao();
-		rawInstances = instanceDao.loadDataFromFile(filePath);
+		String[] trainSet = Dataset.chooseDataset(fileName, 0);
+		String[] testSet = Dataset.chooseDataset(fileName, 1);
+		rawInstances = instanceDao.loadDataFromFile("dataset/"+trainSet[curFold]);
+		validateInstances = instanceDao.loadDataFromFile("dataset/"+testSet[curFold]);
 		//初始化距离矩阵
 		distanceMatrix = new ArrayList<List<Double>>();
 		initializeDistanceMatrix(rawInstances);
@@ -74,7 +79,8 @@ public class InstancesSet {
 		}
 		weightOfMajorityInstance = new ArrayList<>();
 		calWeight();
-		System.out.println("InstancesSet对象初始化结束\n");
+		margin = new ArrayList<Double>();
+		System.out.println("\nInstancesSet对象初始化结束");
 	}
 	/*
 	 * TODO: 将从文件中读取的数据规范化
@@ -117,7 +123,6 @@ public class InstancesSet {
 			}
 			distanceMatrix.add(rawDistance);
 		}
-
 	}
 
 	/*
