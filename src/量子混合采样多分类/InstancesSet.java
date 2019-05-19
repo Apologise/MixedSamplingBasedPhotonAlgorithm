@@ -2,6 +2,8 @@ package 量子混合采样多分类;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -9,6 +11,7 @@ import java.util.Set;
 
 import weka.core.Instance;
 import weka.core.Instances;
+import weka.core.expressionlanguage.common.IfElseMacro;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Normalize;
 
@@ -28,7 +31,7 @@ public class InstancesSet {
 	public List<List<Instance>> instancesByClass;
 	public Set<Integer> minorityClassLabel;
 	public Instances validateInstances;
-	public List<Double> margin;
+	public List<Double> instanceOfMargin;
 	public int fold;
 	
 	public InstancesSet(String fileName, Setting setting) {
@@ -50,13 +53,15 @@ public class InstancesSet {
 		distanceMatrix = new ArrayList<List<Double>>();
 		initializeDistanceMatrix(rawInstances);
 		//将数据集进行归一化
-	//	rawInstances = normalizeInstances(rawInstances);
+		rawInstances = normalizeInstances(rawInstances);
+		/*
 		removeNoiseInstance();
 		//将移除噪声后的数据集的样本加入到originInstances集合中
 		originInstances = new ArrayList<>();
 		for(int i = 0; i < rawInstances.size(); ++i) {
 			originInstances.add(rawInstances.get(i));
 		}
+		*/
 		//获得移除噪声后的距离矩阵(因为样本会减少，因此样本矩阵的行列也会变化)
 		initializeDistanceMatrixAfterRemoveNoise(originInstances);
 		//根据类标将整个原始数据集进行拆分存放于instancesByClass
@@ -79,7 +84,6 @@ public class InstancesSet {
 		}
 		weightOfMajorityInstance = new ArrayList<>();
 		calWeight();
-		margin = new ArrayList<Double>();
 		System.out.println("\nInstancesSet对象初始化结束");
 	}
 	/*
@@ -268,8 +272,90 @@ public class InstancesSet {
 			weightOfMajorityInstance.set(i, updateVaue);
 		}
 	}
+	
+	/*
+	 * TODO: 计算每个样本的margin
+	 * RETURN: 修改List<Double>类型变量margin
+	 * */
+	
+	public void calMargin() {
+		for(int i = 0; i < rawInstances.size(); ++i) {
+			List<Double> distance = distanceMatrix.get(i);
+			
+			//找到最近距离的同类样本点，更新indexOfNearestHit
+			int indexOfNearestHit = -1, indexOfNearestMiss = -1;
+			double tempMinDistanceOfNearestHit = Double.MAX_VALUE, tempMinDistanceOfNearestMiss = Double.MAX_VALUE;
+			for(int j = 0; j < distance.size(); ++j) {
+				if(i == j) {continue;}
+				//寻找同类样本点的最近距离，更新indexOfNearestHit和tempMinDistanceOfNearestHit
+				int classLabel1 = (int)rawInstances.get(i).classValue();
+				int classLabel2 = (int)rawInstances.get(j).classValue();
+				if(classLabel1 == classLabel2 && distance.get(j) < tempMinDistanceOfNearestHit) {
+					tempMinDistanceOfNearestHit = distance.get(j);
+					indexOfNearestHit = j;
+				}
+				//寻找异类样本点的最近距离，更新indexOfNearestMiss和tempMinDistanceOfNearestMiss
+				if(classLabel1 != classLabel2 && distance.get(j) < tempMinDistanceOfNearestMiss) {
+					tempMinDistanceOfNearestMiss = distance.get(j);
+					indexOfNearestMiss = j;
+				}
+			}
+			//找到了同类最近距离和异类最近距离，就可以求出样本i的margin
+			double margin = 0.5*(tempMinDistanceOfNearestMiss-tempMinDistanceOfNearestHit);
+			instanceOfMargin.add(margin);
+		}
+	}
+	
+	/*
+	 * TODO: 去除重复样本
+	 * RETURN：返回去除重复样本后的rawInstances
+	 * */
+	public void removeDuplicateInstance() {
+		//1. 当2个样本之间的距离为0是则表示为重复样本
+		List<Integer> duplicateInstances = new ArrayList<>();
+		for(int i = 0; i < rawInstances.size(); ++i) {
+			//获得样本i的距离向量
+			List<Double> distance = distanceMatrix.get(i);
+			for(int j = 0; j < distance.size(); ++j) {
+				//2.找到重复样本，将其下标加入到list中
+				if(Math.abs(distance.get(j)-0.000001) < 0.00001) {
+					duplicateInstances.add(j);
+					duplicateInstances.add(j);
+				}
+			}
+		}
+		//3. 将重复样本从rawInstance中删除
+		//3.1 由于将rawInstance中删除样本时样本的下标均会改变，因此，我们需要先将下标降序排序，由高到底开始移除，那么底下标样本在其他样本移除时不变
+		Collections.sort(duplicateInstances, new Comparator<Integer>() {
+
+			@Override
+			public int compare(Integer o1, Integer o2) {
+				// TODO Auto-generated method stub
+				if(o1 > o2) {
+					return -1;
+				}else if(o1 == o2){
+					return 0;
+				}else {
+					return 0;
+				}
+			}
+			
+		});
+		//3.2 根据排序后的duplicate进行删除
+		for(int i = 0; i < duplicateInstances.size(); ++i) {
+			rawInstances.remove((int)duplicateInstances.get(i));
+		}
+	}
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
-		
+		InstanceDao instanceDao = new InstanceDao();
+		Setting setting = new Setting(1, 1, 1, 1, 1);
+		InstancesSet instancesSet = new InstancesSet("", setting);
+		instancesSet.rawInstances = instanceDao.loadDataFromFile("dataset/test.arff");
+		instancesSet.distanceMatrix = new ArrayList<List<Double>>();
+		instancesSet.initializeDistanceMatrix(instancesSet.rawInstances);
+		instancesSet.instanceOfMargin = new ArrayList<>();
+		instancesSet.calMargin();
+		return;
 	}
 }
