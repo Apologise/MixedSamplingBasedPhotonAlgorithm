@@ -318,8 +318,8 @@ public class InstancesSet {
 			List<Double> distance = distanceMatrix.get(i);
 			for(int j = 0; j < distance.size(); ++j) {
 				//2.找到重复样本，将其下标加入到list中
-				if(Math.abs(distance.get(j)-0.000001) < 0.00001) {
-					duplicateInstances.add(j);
+				if(Math.abs(distance.get(j)-0.000001) < 0.00001 && i < j) {
+					if(duplicateInstances.contains(j)){continue;}
 					duplicateInstances.add(j);
 				}
 			}
@@ -356,6 +356,7 @@ public class InstancesSet {
 		instancesSet.initializeDistanceMatrix(instancesSet.rawInstances);
 		instancesSet.instanceOfMargin = new ArrayList<>();
 		instancesSet.calMargin();
+		instancesSet.removeDuplicateInstance();
 		return;
 	}
 }

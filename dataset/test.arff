@@ -8,7 +8,9 @@
 1, 2, negative    
  3, 4, positive    
 2, 4, positive
+1,2,negative
 1, -1, negative
 1,-2,positive
+0, 1, negative 
 -1,-2,positive
 
