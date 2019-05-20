@@ -98,7 +98,7 @@ public class InstancesSet {
 	}
 	
 	public List<List<Double>> initializeDistanceMatrix(Instances rawInstances) {
-
+		distanceMatrix.clear();
 		for(Instance first: rawInstances) {
 			List<Double> rawDistance = new ArrayList<>();
 			for(Instance second: rawInstances) {
@@ -132,7 +132,7 @@ public class InstancesSet {
 	/*
 	 * TODO：去除数据集中的噪声
 	 * 当一个样本周围的K近邻都与其类标不相同时，则判定为噪声样本
-	 * RETURN：返回一个噪声样本集合
+	 * RETURN：修改originInstances对象
 	 * */
 	public void removeNoiseInstance() {
 		List<Instance> noisyInstances = new ArrayList<>();
@@ -346,6 +346,43 @@ public class InstancesSet {
 			rawInstances.remove((int)duplicateInstances.get(i));
 		}
 	}
+	
+	/*
+	 * TODO: 根据margin距离进行去除噪声，如果margin距离为负，则判定为噪声
+	 * RETURN: 返回去除噪声后的List<Instance>类型的originInstances
+	 * */
+	public void removeNoiseInstanceByMargin(){
+		//1.找出噪声样本，将对应下标加入到indexOfNoiseInstance中
+		List<Integer> indexOfNoiseInstance = new ArrayList<>();
+		for(int i = 0; i < instanceOfMargin.size(); ++i) {
+			double margin = instanceOfMargin.get(i);
+			if(margin < 0) {
+				indexOfNoiseInstance.add(i);
+			}
+		}
+		
+		//2. 对indexOfNoiseInstance进行降序排序
+		Collections.sort(indexOfNoiseInstance, new Comparator<Integer>() {
+			@Override
+			public int compare(Integer o1, Integer o2) {
+				// TODO Auto-generated method stub
+				if(o1 > o2) {
+					return -1;
+				}else if(o1 == o2){
+					return 0;
+				}else {
+					return 0;
+				}
+			}
+			
+		});
+		//3. 根据排序后的indexOfNoiseInstance移除噪声样本
+		for(int i = 0; i < indexOfNoiseInstance.size(); ++i) {
+			originInstances.remove((int)indexOfNoiseInstance.get(i));
+		}
+	}
+	
+	
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		InstanceDao instanceDao = new InstanceDao();
@@ -354,9 +391,23 @@ public class InstancesSet {
 		instancesSet.rawInstances = instanceDao.loadDataFromFile("dataset/test.arff");
 		instancesSet.distanceMatrix = new ArrayList<List<Double>>();
 		instancesSet.initializeDistanceMatrix(instancesSet.rawInstances);
+		//1. 先移除重复样本
+		instancesSet.removeDuplicateInstance();
+		//由于样本的减少，因此需要重新初始化距离矩阵
+		instancesSet.initializeDistanceMatrix(instancesSet.rawInstances);
+		//2. 计算每个样本的Margin距离
 		instancesSet.instanceOfMargin = new ArrayList<>();
 		instancesSet.calMargin();
-		instancesSet.removeDuplicateInstance();
+		//3. 根据margin距离去除噪声
+		//3.1 初始化originInstances，将所有样本加入道origin中
+		instancesSet.originInstances = new ArrayList<>();
+		for (int i = 0; i < instancesSet.rawInstances.size(); ++i) {
+			instancesSet.originInstances.add(instancesSet.rawInstances.get(i));
+		}
+		//3.2 根据margin来移除噪声
+		instancesSet.removeNoiseInstanceByMargin();
+		//3.3 移除噪声后，再重新初始化距离矩阵
+		instancesSet.initializeDistanceMatrixAfterRemoveNoise(instancesSet.originInstances);
 		return;
 	}
 }
