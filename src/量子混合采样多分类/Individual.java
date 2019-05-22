@@ -1,6 +1,8 @@
 package 量子混合采样多分类;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
@@ -36,14 +38,13 @@ public class Individual {
 	 * */
 	public void initializeIndividual() {
 		handledInstances = new ArrayList<Instance>();
-		flag = new int[instancesSet.majorityInstances.size()];
-		phase = new Phase[instancesSet.majorityInstances.size()];
-		for(int i = 0; i < instancesSet.majorityInstances.size(); ++i) {
+		flag = new int[instancesSet.indexOfInstancesInMajorityInstancesIntoPopulation.size()];
+		phase = new Phase[instancesSet.indexOfInstancesInMajorityInstancesIntoPopulation.size()];
+		for(int i = 0; i < instancesSet.indexOfInstancesInMajorityInstancesIntoPopulation.size(); ++i) {
 			phase[i] = new Phase();
 		}
 		handledMajorityInstances = new Instances(instancesSet.rawInstances);
 		handledMajorityInstances.clear();
-	
 	}
 	
 	/*
@@ -88,12 +89,17 @@ public class Individual {
 		handledInstances.clear();
 		handledMajorityInstances.clear();
 		//将少数类样本加入到handledInstnaces中
-		for(Instance inst: instancesSet.minorityInstances) {
+		
+		//将多数类加入到handledMajorityInstances中
+		for(Instance inst: instancesSet.majorityInstances) {
 			handledInstances.add(inst);
 		}
 //		System.out.println("原始的少数类样本个数:"+handledInstances.size()+"原始多数类样本个数："+instancesSet.majorityInstances.size());
 		underSampling();
 //		System.out.println("处理后多数类样本个数为："+handledMajorityInstances.size());
+		for(Instance inst: instancesSet.minorityInstances) {
+			handledInstances.add(inst);
+		}
 		overSampling();
 	//	System.out.println("处理后样本个数为"+handledInstances.size());
 	}
@@ -104,12 +110,34 @@ public class Individual {
 	 * RETURN: 将欠采样后的样本加入到handledInstances中
 	 * */
 	public void underSampling() {
-		List<Instance> majorityInstances = instancesSet.majorityInstances;
-		for(int i = 0; i < majorityInstances.size(); ++i) {
+		//根据观察的个体状态，将flag[0]的样本进行移除
+		List<Integer> indexOfRemovedInstances = new ArrayList<>();
+		for(int i = 0; i < flag.length; ++i) {
 			if(flag[i] == 0) {
-				handledInstances.add(majorityInstances.get(i));
-				handledMajorityInstances.add(majorityInstances.get(i));
+				indexOfRemovedInstances.add(instancesSet.indexOfInstancesInMajorityInstancesIntoPopulation.get(i));
 			}
+		}
+		Collections.sort(indexOfRemovedInstances, new Comparator<Integer>() {
+
+			@Override
+			public int compare(Integer o1, Integer o2) {
+				// TODO Auto-generated method stub
+				if(o1 > o2) {
+					return -1;
+				}else if(o1 < o2){
+					return 1;
+				}else {
+					return 0;
+				}
+			}
+			
+		});
+		List<Instance> majorityInstances = instancesSet.majorityInstances;
+		for(int i = 0; i < indexOfRemovedInstances.size(); ++i) {
+			int index = indexOfRemovedInstances.get(i);
+			System.out.println(index);
+			Instance inst = majorityInstances.get(index);
+			handledInstances.remove(inst);
 		}
 	}
 	
@@ -207,7 +235,7 @@ public class Individual {
 		// TODO Auto-generated method stub
 		Setting setting  = new Setting(100, 4, 4, 10, 30);
 		InstancesSet instancesSet = new InstancesSet("pima", setting);
-	//	instancesSet.initializeInstancesSet();
+		instancesSet.initializeInstancesSet(0);
 		Individual individual = new Individual(setting, instancesSet);
 		individual.initializeIndividual();
 		individual.watchByPhase();

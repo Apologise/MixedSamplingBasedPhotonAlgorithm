@@ -4,10 +4,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 
 import weka.core.Instance;
 import weka.core.Instances;
@@ -32,6 +34,7 @@ public class InstancesSet {
 	public Set<Integer> minorityClassLabel;
 	public Instances validateInstances;
 	public List<Double> instanceOfMargin;
+	public List<Integer> indexOfInstancesInMajorityInstancesIntoPopulation;
 	public int fold;
 	
 	public InstancesSet(String fileName, Setting setting) {
@@ -47,23 +50,28 @@ public class InstancesSet {
 		InstanceDao instanceDao = new InstanceDao();
 		String[] trainSet = Dataset.chooseDataset(fileName, 0);
 		String[] testSet = Dataset.chooseDataset(fileName, 1);
-		rawInstances = instanceDao.loadDataFromFile("dataset/"+trainSet[curFold]);
-		validateInstances = instanceDao.loadDataFromFile("dataset/"+testSet[curFold]);
+		rawInstances = instanceDao.loadDataFromFile("dataset/5-fold-pima/pima-5-1tra.arff");
+		validateInstances = instanceDao.loadDataFromFile("dataset/5-fold-pima/pima-5-1tst.arff");
 		//初始化距离矩阵
 		distanceMatrix = new ArrayList<List<Double>>();
 		initializeDistanceMatrix(rawInstances);
+		//移除重复样本
+		removeDuplicateInstance();
+		initializeDistanceMatrix(rawInstances);
 		//将数据集进行归一化
-		rawInstances = normalizeInstances(rawInstances);
-		/*
+//		rawInstances = normalizeInstances(rawInstances);
 		removeNoiseInstance();
 		//将移除噪声后的数据集的样本加入到originInstances集合中
+		
 		originInstances = new ArrayList<>();
 		for(int i = 0; i < rawInstances.size(); ++i) {
 			originInstances.add(rawInstances.get(i));
 		}
-		*/
 		//获得移除噪声后的距离矩阵(因为样本会减少，因此样本矩阵的行列也会变化)
 		initializeDistanceMatrixAfterRemoveNoise(originInstances);
+		//移除噪声后计算样本间距
+		instanceOfMargin = new ArrayList<>();
+		calMargin();
 		//根据类标将整个原始数据集进行拆分存放于instancesByClass
 		instancesByClass = new ArrayList<List<Instance>>();
 		for(int i = 0; i < rawInstances.numClasses(); ++i) {
@@ -84,6 +92,8 @@ public class InstancesSet {
 		}
 		weightOfMajorityInstance = new ArrayList<>();
 		calWeight();
+		indexOfInstancesInMajorityInstancesIntoPopulation = new ArrayList<>();
+		indexOfInstancesInMajorityInstancesIntoPopulation = getIndexOfInstanceToPopulation();
 		System.out.println("\nInstancesSet对象初始化结束");
 	}
 	/*
@@ -279,7 +289,7 @@ public class InstancesSet {
 	 * */
 	
 	public void calMargin() {
-		for(int i = 0; i < rawInstances.size(); ++i) {
+		for(int i = 0; i < originInstances.size(); ++i) {
 			List<Double> distance = distanceMatrix.get(i);
 			
 			//找到最近距离的同类样本点，更新indexOfNearestHit
@@ -288,8 +298,8 @@ public class InstancesSet {
 			for(int j = 0; j < distance.size(); ++j) {
 				if(i == j) {continue;}
 				//寻找同类样本点的最近距离，更新indexOfNearestHit和tempMinDistanceOfNearestHit
-				int classLabel1 = (int)rawInstances.get(i).classValue();
-				int classLabel2 = (int)rawInstances.get(j).classValue();
+				int classLabel1 = (int)originInstances.get(i).classValue();
+				int classLabel2 = (int)originInstances.get(j).classValue();
 				if(classLabel1 == classLabel2 && distance.get(j) < tempMinDistanceOfNearestHit) {
 					tempMinDistanceOfNearestHit = distance.get(j);
 					indexOfNearestHit = j;
@@ -327,7 +337,6 @@ public class InstancesSet {
 		//3. 将重复样本从rawInstance中删除
 		//3.1 由于将rawInstance中删除样本时样本的下标均会改变，因此，我们需要先将下标降序排序，由高到底开始移除，那么底下标样本在其他样本移除时不变
 		Collections.sort(duplicateInstances, new Comparator<Integer>() {
-
 			@Override
 			public int compare(Integer o1, Integer o2) {
 				// TODO Auto-generated method stub
@@ -382,32 +391,56 @@ public class InstancesSet {
 		}
 	}
 	
+	/*
+	 * TODO： 根据margin计算出前30%的多数样本的下标,这些下标对应的样本放入到量子优化算法中进行欠采样
+	 * RETURN： 返回前30%多数类样本的下标
+	 * */
+	public List<Integer> getIndexOfInstanceToPopulation(){
+		List<Integer> indexOfInstance = new ArrayList<>();
+		//1. 从instanceOfMargin中获得多数类样本的margin值
+		List<Double> marginOfMajority = new ArrayList<>();
+		for(Instance inst: majorityInstances) {
+			//找到inst在originInstances中的下标
+			int index = originInstances.indexOf(inst);
+			double margin = instanceOfMargin.get(index);
+			marginOfMajority.add(margin);
+		}
+		//2. 将多数类的margin按照<样本下标（majorityInstances中的下标），样本margin>存放到indexMapToMargin中
+		Map<Integer, Double> indexMapToMargin = new HashMap<>();
+		for(int i = 0; i < marginOfMajority.size(); ++i) {
+			indexMapToMargin.put(i, marginOfMajority.get(i));
+		}
+		//3. 根据margin对indexMapToMargin进行升序排序
+		//3.1 由于无法直接对indexMapToMargin按照value进行排序，因此需要将indexMapToMargin中的实体加入到List中进行排序
+		List<Map.Entry<Integer, Double>> tempEntries = new ArrayList<>(indexMapToMargin.entrySet());
+		Collections.sort(tempEntries, new Comparator<Map.Entry<Integer, Double>>() {
+			@Override
+			public int compare(Map.Entry<Integer, Double> o1, Map.Entry<Integer, Double> o2) {
+				if(o1.getValue() > o2.getValue()) {
+					return 1;
+				}else if(o1.getValue() < o2.getValue()) {
+					return -1;
+				}else {
+					return 0;
+				}
+			}
+		});
+		
+		//4. 从majorityInstance中取出前一定百分比(此处为30%)的样本
+		for(int i = 0; i < tempEntries.size()*0.3; ++i) {
+			indexOfInstance.add(tempEntries.get(i).getKey());
+		}
+		//5.返回选出的样本的下标，存放到indexOfInstance中
+		return indexOfInstance;
+	}
+	
 	
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		InstanceDao instanceDao = new InstanceDao();
-		Setting setting = new Setting(1, 1, 1, 1, 1);
+		Setting setting = new Setting(200, 5, 5, 1, 1);
 		InstancesSet instancesSet = new InstancesSet("", setting);
-		instancesSet.rawInstances = instanceDao.loadDataFromFile("dataset/test.arff");
-		instancesSet.distanceMatrix = new ArrayList<List<Double>>();
-		instancesSet.initializeDistanceMatrix(instancesSet.rawInstances);
-		//1. 先移除重复样本
-		instancesSet.removeDuplicateInstance();
-		//由于样本的减少，因此需要重新初始化距离矩阵
-		instancesSet.initializeDistanceMatrix(instancesSet.rawInstances);
-		//2. 计算每个样本的Margin距离
-		instancesSet.instanceOfMargin = new ArrayList<>();
-		instancesSet.calMargin();
-		//3. 根据margin距离去除噪声
-		//3.1 初始化originInstances，将所有样本加入道origin中
-		instancesSet.originInstances = new ArrayList<>();
-		for (int i = 0; i < instancesSet.rawInstances.size(); ++i) {
-			instancesSet.originInstances.add(instancesSet.rawInstances.get(i));
-		}
-		//3.2 根据margin来移除噪声
-		instancesSet.removeNoiseInstanceByMargin();
-		//3.3 移除噪声后，再重新初始化距离矩阵
-		instancesSet.initializeDistanceMatrixAfterRemoveNoise(instancesSet.originInstances);
+		instancesSet.initializeInstancesSet(1);
 		return;
 	}
 }
