@@ -40,7 +40,7 @@ public class QuantumModel {
 			// c.利用新的数据集进行分类，得到分类结果
 			for (int i = 0; i < population.length; ++i) {
 				population[i].mixedSampling();
-				population[i].calFitness();
+				population[i].calFitness(setting.cls);
 			}
 
 			// 4.根据适应度保留最佳个体
@@ -104,7 +104,7 @@ public class QuantumModel {
 			int k = 1, noisyK = 2;
 			for (int tempK = 2; tempK <= 2; ++tempK) {
 				for (int tempNoiseK = 2; tempNoiseK <= 2; tempNoiseK++) {
-					Setting setting = new Setting(tempK, tempNoiseK, 20, 200, 30);
+					Setting setting = new Setting(tempK, tempNoiseK, 20, 200, 30,Enum_Classifier.C45);
 					InstancesSet instancesSet = new InstancesSet(dataSets[set], setting);
 					double sum = 0;
 					for (int i = 0; i < 5; ++i) {

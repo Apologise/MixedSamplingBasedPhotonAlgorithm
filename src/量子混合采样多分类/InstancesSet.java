@@ -438,7 +438,7 @@ public class InstancesSet {
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		InstanceDao instanceDao = new InstanceDao();
-		Setting setting = new Setting(200, 5, 5, 1, 1);
+		Setting setting = new Setting(200, 5, 5, 1, 1, Enum_Classifier.C45);
 		InstancesSet instancesSet = new InstancesSet("", setting);
 		instancesSet.initializeInstancesSet(1);
 		return;

@@ -16,7 +16,7 @@ public class Main {
 			int k = 1, noisyK = 2;
 			for (int tempK = 2; tempK < 10; ++tempK) {
 				for (int tempNoiseK = 2; tempNoiseK < 10; tempNoiseK++) {
-					Setting setting = new Setting(tempK, tempNoiseK, 20, 500, 30);
+					Setting setting = new Setting(tempK, tempNoiseK, 20, 500, 30, Enum_Classifier.C45);
 					InstancesSet instancesSet = new InstancesSet(dataSets[set], setting);
 					double sum = 0;
 					for (int i = 0; i < 5; ++i) {

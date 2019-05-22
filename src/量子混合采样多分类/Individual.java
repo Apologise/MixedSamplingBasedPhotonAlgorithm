@@ -65,7 +65,7 @@ public class Individual {
 	 * TODO: 计算个体的适应度
 	 * RETURN: 修改成员变量fitness
 	 * */
-	public void calFitness() throws Exception {
+	public void calFitness(Enum_Classifier cls) throws Exception {
 		//利用handledInstances进行分类实验
 		Instances newInstances = new Instances(instancesSet.rawInstances);
 		newInstances.clear();
@@ -73,7 +73,7 @@ public class Individual {
 		for(Instance inst: handledInstances) {
 			newInstances.add(inst);
 		}
-		Classifier classifier = new NaiveBayes();
+		Classifier classifier = chooseClassifier(cls);
 		classifier.buildClassifier(newInstances);
 		Evaluation evaluation = new Evaluation(newInstances);
 		evaluation.evaluateModel(classifier, instancesSet.validateInstances);
@@ -173,7 +173,6 @@ public class Individual {
 				tempInstancesMinority.add(inst);
 			}
 			for(int i = 0; i < instances.size(); ++i) {
-
 				generator.generateSample(instances.get(i), tempInstancesMinority, tempInstancesMajority, output, n[i]);
 			}
 		}
@@ -231,16 +230,46 @@ public class Individual {
 		}
 	}
 	
+	/*
+	 * TODO:通过参数选择分类器函数
+	 * RETURN: 通过参数进行选择某一种分类器，而不需要进入calFitness函数中进行修改
+	 * */
+	public Classifier chooseClassifier(Enum_Classifier cls) {
+		Classifier classifier = null;
+		switch (cls) {
+		case C45:
+			classifier = new J48();
+			break;
+		case KNN:
+			classifier = new IBk();
+			break;
+		case SMO:
+			classifier = new SMO();
+			break;
+		case NB:
+			classifier = new NaiveBayes();
+			break;
+		case MLP:
+			classifier = new MultilayerPerceptron();
+			break;
+		default:
+			System.out.println("未找到该算法！！！");
+			break;
+		}
+		return classifier;
+	}
+	
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
-		Setting setting  = new Setting(100, 4, 4, 10, 30);
+		Enum_Classifier classifier = Enum_Classifier.C45;
+		Setting setting  = new Setting(100, 4, 4, 10, 30, classifier);
 		InstancesSet instancesSet = new InstancesSet("pima", setting);
 		instancesSet.initializeInstancesSet(0);
 		Individual individual = new Individual(setting, instancesSet);
 		individual.initializeIndividual();
 		individual.watchByPhase();
 		individual.mixedSampling();
-		individual.calFitness();
+		individual.calFitness(setting.cls);
 		System.out.println(individual.fitness);
 	}
 }
