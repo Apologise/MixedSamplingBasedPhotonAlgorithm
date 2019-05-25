@@ -1,6 +1,11 @@
 package 量子混合采样多分类;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.FileWriter;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 public class QuantumModel {
 	public Individual[] population; // 种群个体
@@ -45,16 +50,20 @@ public class QuantumModel {
 
 			// 4.根据适应度保留最佳个体
 			if (T == iter) {
-				gBestIndividual = getLocalBestIndividual();
+				gBestIndividual = (Individual)getLocalBestIndividual().deepCopy();
 			} else {
 				lBestIndividual = getLocalBestIndividual();
 				if (lBestIndividual.fitness > gBestIndividual.fitness) {
-					gBestIndividual = lBestIndividual;
+					gBestIndividual = (Individual)lBestIndividual.deepCopy();
 				}
 			}
 			// 5.利用量子门更新每一个个体
 			for (int i = 0; i < population.length; ++i) {
-				population[i].phaseRotate();
+				//1.首先根据最优个体和当前个体计算旋转方向和旋转角度
+				double angle = updateAngle(population[i], gBestIndividual);
+				//2.根据旋转角对量子位进行旋转
+				
+				population[i].phaseRotate(angle);
 			}
 			T--;
 		} while (T != 0);
@@ -63,7 +72,40 @@ public class QuantumModel {
 		System.out.println(gBestIndividual.fitness);
 		System.out.println("算法运行结束");
 	}
-
+	
+	/*
+	 * TODO: 根据个体currentIndividual和全局最优globalBestIndividual调整旋转角度
+	 * RETURN: 返回更新后的旋转角度
+	 * */
+	public double updateAngle(Individual currIndividual, Individual globalIndividual) {
+		double angle = 0.0*Math.PI;
+		
+		return angle;
+	}
+	
+	/*
+	 * TODO: 根据论文《基于改进量子进化算法的特征选择》中的转向策略表得到当前个体每一个量子位的转向
+	 * RETURN: -1: 逆时针 +1: 顺时针  0: 不需要旋转
+	 * */
+	public int[] rotateDirection(Individual currIndividual, Individual globalIndividual) {
+		int[] direction = new int[currIndividual.flag.length];
+		double currFitness = currIndividual.fitness;
+		double globalFitness = globalIndividual.fitness;
+		for(int i = 0; i < direction.length; ++i) {
+			double alpha = currIndividual.phase[i].alpha;
+			double beta = currIndividual.phase[i].beta;
+			
+		}
+		return direction;
+	}
+	/*
+	 * TODO: 更新每个个体的旋转角度
+	 * RETURN: 返回当前个体在在下一次旋转时的旋转角度
+	 * */
+	public double calAngleForIndividual() {
+		double angle = 0;
+		return angle;
+	}
 	/*
 	 * TODO:初始化种群{包括实例化population中每一个个体对象，调用初始化函数} RETURN：修改population数组
 	 */
@@ -90,7 +132,8 @@ public class QuantumModel {
 		}
 		return population[index];
 	}
-
+	
+	
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		String[] dataSets = { "glass1", "pima", "glass0", "yeast1", "vehicle1", "glass0123vs456", "ecoli1",

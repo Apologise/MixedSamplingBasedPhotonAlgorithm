@@ -1,5 +1,11 @@
 package 量子混合采样多分类;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -18,7 +24,7 @@ import weka.classifiers.trees.J48;
 import weka.core.Instance;
 import weka.core.Instances;
 
-public class Individual {
+public class Individual  implements Serializable{
 	public List<Instance> handledInstances;	//处理后的样本集合，用作计算该个体的适应度
 	public int[] flag;
 	public Phase[] phase;
@@ -51,16 +57,19 @@ public class Individual {
 	 * TODO:相位旋转
 	 * RETURN：改变个体的相位值
 	 * */
-	public void phaseRotate() {
+	public void phaseRotate(double angle) {
+		
 		for(int i = 0; i < phase.length; ++i) {
-			double nextAlpha = phase[i].alpha*Math.cos(setting.rotateAngle)
-					-phase[i].beta*Math.sin(setting.rotateAngle);
-			double nextBeta = phase[i].alpha*Math.sin(setting.rotateAngle)+
-					phase[i].beta*Math.cos(setting.rotateAngle);
+			double nextAlpha = phase[i].alpha*Math.cos(angle)
+					-phase[i].beta*Math.sin(angle);
+			double nextBeta = phase[i].alpha*Math.sin(angle)+
+					phase[i].beta*Math.cos(angle);
 			phase[i].alpha = nextAlpha;
 			phase[i].beta = nextBeta;
 		}
 	}
+	
+	
 	/*
 	 * TODO: 计算个体的适应度
 	 * RETURN: 修改成员变量fitness
@@ -135,7 +144,6 @@ public class Individual {
 		List<Instance> majorityInstances = instancesSet.majorityInstances;
 		for(int i = 0; i < indexOfRemovedInstances.size(); ++i) {
 			int index = indexOfRemovedInstances.get(i);
-			System.out.println(index);
 			Instance inst = majorityInstances.get(index);
 			handledInstances.remove(inst);
 		}
@@ -254,10 +262,35 @@ public class Individual {
 			break;
 		default:
 			System.out.println("未找到该算法！！！");
+			System.exit(0);
 			break;
 		}
 		return classifier;
 	}
+	
+	/*
+	 * TODO: 对对象进行深复制
+	 * RETURN: 返回一个经过深复制后的Object对象
+	 * */
+	public Object deepCopy() throws ClassNotFoundException {
+		Object desObject = null;
+		try {
+			//1. 将srcObject对象写入ByteArray中
+			ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+			ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
+			objectOutputStream.writeObject(this);
+			objectOutputStream.close();
+			//2. 从ByteArray中读入对象并赋给desObject
+			ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
+			ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream);
+			desObject = objectInputStream.readObject();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return desObject;
+	}
+
 	
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
@@ -269,7 +302,9 @@ public class Individual {
 		individual.initializeIndividual();
 		individual.watchByPhase();
 		individual.mixedSampling();
+		Individual newIndividual = (Individual)individual.deepCopy();
 		individual.calFitness(setting.cls);
+		individual.handledInstances.get(0).setValue(0, -1);
 		System.out.println(individual.fitness);
 	}
 }

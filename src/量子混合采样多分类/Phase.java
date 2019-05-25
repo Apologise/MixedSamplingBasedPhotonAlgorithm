@@ -1,6 +1,8 @@
 package 量子混合采样多分类;
 
-public class Phase {
+import java.io.Serializable;
+
+public class Phase implements Serializable{
 	double alpha;
 	double beta;
 	public Phase() {

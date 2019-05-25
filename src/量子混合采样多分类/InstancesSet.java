@@ -1,5 +1,6 @@
 package 量子混合采样多分类;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -21,7 +22,7 @@ import weka.filters.unsupervised.attribute.Normalize;
  * InstancesSet类实例用于保存各种类型的样本集合
  * InstancesSet实例变量一旦调用initializeInstancesSet()后，里面的变量都不会被其他对象修改
  * */
-public class InstancesSet {
+public class InstancesSet implements Serializable{
 	public final String fileName;
 	public Instances rawInstances;	//未经任何处理的原始数据
 	public List<Instance> originInstances;	//经过了归一化、标准化和去除了噪声的数据
