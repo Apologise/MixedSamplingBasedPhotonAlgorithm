@@ -51,8 +51,8 @@ public class InstancesSet implements Serializable{
 		InstanceDao instanceDao = new InstanceDao();
 		String[] trainSet = Dataset.chooseDataset(fileName, 0);
 		String[] testSet = Dataset.chooseDataset(fileName, 1);
-		rawInstances = instanceDao.loadDataFromFile("dataset/5-fold-pima/pima-5-1tra.arff");
-		validateInstances = instanceDao.loadDataFromFile("dataset/5-fold-pima/pima-5-1tst.arff");
+		rawInstances = instanceDao.loadDataFromFile("dataset/iris.2D.arff");
+		validateInstances = instanceDao.loadDataFromFile("dataset/iris.2D.arff");
 		//初始化距离矩阵
 		distanceMatrix = new ArrayList<List<Double>>();
 		initializeDistanceMatrix(rawInstances);
@@ -60,10 +60,11 @@ public class InstancesSet implements Serializable{
 		removeDuplicateInstance();
 		initializeDistanceMatrix(rawInstances);
 		//将数据集进行归一化
-//		rawInstances = normalizeInstances(rawInstances);
+		rawInstances = normalizeInstances(rawInstances);
+		initializeDistanceMatrix(rawInstances);
 		removeNoiseInstance();
 		//将移除噪声后的数据集的样本加入到originInstances集合中
-		
+
 		originInstances = new ArrayList<>();
 		for(int i = 0; i < rawInstances.size(); ++i) {
 			originInstances.add(rawInstances.get(i));
@@ -95,7 +96,7 @@ public class InstancesSet implements Serializable{
 		calWeight();
 		indexOfInstancesInMajorityInstancesIntoPopulation = new ArrayList<>();
 		indexOfInstancesInMajorityInstancesIntoPopulation = getIndexOfInstanceToPopulation();
-		System.out.println("\nInstancesSet对象初始化结束");
+
 	}
 	/*
 	 * TODO: 将从文件中读取的数据规范化
@@ -313,6 +314,9 @@ public class InstancesSet implements Serializable{
 			}
 			//找到了同类最近距离和异类最近距离，就可以求出样本i的margin
 			double margin = 0.5*(tempMinDistanceOfNearestMiss-tempMinDistanceOfNearestHit);
+			if(margin < 0) {
+				margin = 0;
+			}
 			instanceOfMargin.add(margin);
 		}
 	}
@@ -329,7 +333,7 @@ public class InstancesSet implements Serializable{
 			List<Double> distance = distanceMatrix.get(i);
 			for(int j = 0; j < distance.size(); ++j) {
 				//2.找到重复样本，将其下标加入到list中
-				if(Math.abs(distance.get(j)-0.000001) < 0.00001 && i < j) {
+				if(Math.abs(distance.get(j)) < 0.00001 && i < j) {
 					if(duplicateInstances.contains(j)){continue;}
 					duplicateInstances.add(j);
 				}
@@ -346,7 +350,7 @@ public class InstancesSet implements Serializable{
 				}else if(o1 == o2){
 					return 0;
 				}else {
-					return 0;
+					return 1;
 				}
 			}
 			

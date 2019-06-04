@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>数据集可视化</title>
+<script src="echarts.min.js"></script>
+<script src="jquery-3.4.1.min.js"></script>
+
+</head>
+<body>
+<div>
+        <input type="file" id="files" style="display: none" onchange="fileImport();">
+        <input type="button" id="fileImport" value="导入">
+    </div>
+
+    <div id="main" style="width: 600px;height:400px;"></div>
+     <script type="text/javascript">
+        // 基于准备好的dom，初始化echarts实例
+		$("#fileImport").click(function () {
+				$("#files").click();
+			})
+        function fileImport() {
+            //获取读取我文件的File对象
+
+			var pointsX = [];
+			var pointsY= [];
+			var pointsLabel= [];
+			var pointsMargin= [];
+
+            var selectedFile = document.getElementById('files').files[0];
+            var name = selectedFile.name;//读取选中文件的文件名
+            var size = selectedFile.size;//读取选中文件的大小
+
+            var reader = new FileReader();//这是核心,读取操作就是由它完成.
+            reader.readAsText(selectedFile);//读取文件的内容,也可以读取文件的URL
+            reader.onload = function (e) {
+                //当读取完成后回调这个函数,然后此时文件的内容存储到了result中,直接操作即可
+				var data = this.result.split("\n");
+				for(var i = 0; i < data.length; ++i){
+					var tempData = data[i].split(",");
+					console.log(tempData);
+					pointsX.push(parseFloat(tempData[0]));
+					pointsY.push(parseFloat(tempData[1]));
+					pointsLabel.push(parseInt(tempData[2]));
+					pointsMargin.push(parseFloat(tempData[3]));
+
+				}
+
+				var instances = new Array();
+				for(var i = 0; i < pointsX.length; ++i){
+					instances[i] = new Array();
+					instances[i][0] = pointsX[i];
+					instances[i][1] = pointsY[i];
+				}
+
+				var level = [];
+				var max = pointsMargin[0], min = pointsMargin[0];
+				for(var i = 0; i < pointsMargin.length; ++i){
+					if(pointsMargin[i] > max){
+						max = pointsMargin[i];
+					}
+					if(pointsMargin[i] < min){
+						min = pointsMargin[i];
+					}
+				}
+				var gradient = Math.abs(max-min)/5;
+
+				for(var i = 0; i < pointsMargin.length; ++i){
+
+					var diff = parseInt((pointsMargin[i] - min)/gradient);
+					level[i] = diff;
+				}
+
+
+				var myChart = echarts.init(document.getElementById('main'));
+
+		var i = 0;
+        // 指定图表的配置项和数据
+        var option = {
+            title: {
+                text: '数据集可视化'
+            },
+
+            xAxis: {
+
+            },
+            yAxis: {},
+            series: [{
+                name: '销量',
+                type: 'scatter',
+                data: instances,
+				itemStyle:{
+					normal:{
+						color: function(params){
+						var color = ['#0A0A0A', '#CD0000', '#9400D3'];
+						/*
+						var colorList = [['#0A0A0A','#EE6363','#EE7621','#EE8262'],['#0A0A0A',
+                           '#F8F8FF','#EEDFCC','#EEE8AA']];
+						   if(pointsLabel[params.dataIndex] == 1){
+							return colorList[1][level[params.dataIndex]];
+						   }else{
+							return colorList[0][level[params.dataIndex]];
+						}
+						*/
+						/*
+						if(level[params.dataIndex] == 0){
+							i++;
+							console.log(i);
+							return '#00BFFF';
+						}
+						*/
+						if(pointsLabel[params.dataIndex] == 0){
+							return color[0];
+						}else if(pointsLabel[params.dataIndex] == 1){
+							return color[1];
+						}else{
+							return color[2];
+						}
+
+					}
+				}
+				}
+            }]
+        };
+				myChart.setOption(option);
+       }
+
+
+
+
+
+
+        // 使用刚指定的配置项和数据显示图表。
+
+        }
+
+
+
+    </script>
+</body>
+</html>

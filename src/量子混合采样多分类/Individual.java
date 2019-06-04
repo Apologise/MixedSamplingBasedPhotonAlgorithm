@@ -32,6 +32,7 @@ public class Individual  implements Serializable{
 	public Setting setting;
 	public InstancesSet instancesSet;
 	public Instances handledMajorityInstances;
+	public List<List<Instance>> instanceByClass;
 
 	public Individual(Setting setting, InstancesSet instancesSet) {
 		this.setting = setting;
@@ -57,13 +58,12 @@ public class Individual  implements Serializable{
 	 * TODO:相位旋转
 	 * RETURN：改变个体的相位值
 	 * */
-	public void phaseRotate(double angle) {
-		
+	public void phaseRotate(double[] angle) {
 		for(int i = 0; i < phase.length; ++i) {
-			double nextAlpha = phase[i].alpha*Math.cos(angle)
-					-phase[i].beta*Math.sin(angle);
-			double nextBeta = phase[i].alpha*Math.sin(angle)+
-					phase[i].beta*Math.cos(angle);
+			double nextAlpha = phase[i].alpha*Math.cos(angle[i])
+					-phase[i].beta*Math.sin(angle[i]);
+			double nextBeta = phase[i].alpha*Math.sin(angle[i])+
+					phase[i].beta*Math.cos(angle[i]);
 			phase[i].alpha = nextAlpha;
 			phase[i].beta = nextBeta;
 		}
@@ -105,11 +105,18 @@ public class Individual  implements Serializable{
 		}
 //		System.out.println("原始的少数类样本个数:"+handledInstances.size()+"原始多数类样本个数："+instancesSet.majorityInstances.size());
 		underSampling();
-//		System.out.println("处理后多数类样本个数为："+handledMajorityInstances.size());
+		//将处理后的多数类样本加入到handledMajorityInstances中
+		for(Instance inst: handledInstances) {
+			handledMajorityInstances.add(inst);
+		}
 		for(Instance inst: instancesSet.minorityInstances) {
 			handledInstances.add(inst);
 		}
+		
+		
+		System.out.println("过采样前样本的个数："+handledInstances.size());
 		overSampling();
+		System.out.println("过采样后样本的个数："+handledInstances.size());
 	//	System.out.println("处理后样本个数为"+handledInstances.size());
 	}
 	
@@ -159,14 +166,16 @@ public class Individual  implements Serializable{
 		Iterator<Integer> iterator = labels.iterator();
 		GenerateSample generator = new GenerateSample(setting);
 		List<Instance> output = new ArrayList<>();
-		int average = handledMajorityInstances.size()/instancesSet.rawInstances.numClasses();
-	//	System.out.println("平均样本个数为："+average);
-		while(iterator.hasNext()) {
-			int label = iterator.next();
-			List<Instance> instances = instancesSet.instancesByClass.get(label);
+		int average = handledInstances.size()/instancesSet.rawInstances.numClasses();
+		int  numClass = instancesSet.rawInstances.numClasses();
+		//1. 首先将所有样本按照类标进行拆分，此时存储所有样本的对象为handledInstances
+		instanceByClass = splitByClass();
+		//System.out.println("平均样本个数为："+average);
+		for(int classValue = 0; classValue < numClass; classValue++){
+			List<Instance> instances = instanceByClass.get(classValue);
 			//如果少数类样本多于平均的样本数量，那么就不需要进行过采样
 			if(instances.size() > average) {
-				return;
+				continue;
 			}
 			int[] n = calInstanceToGenerate(instancesSet.minorityInstances, average);
 			//针对instances进行过采样
@@ -184,12 +193,31 @@ public class Individual  implements Serializable{
 				generator.generateSample(instances.get(i), tempInstancesMinority, tempInstancesMajority, output, n[i]);
 			}
 		}
-//		System.out.println("生成的样本个数为："+output.size());
+		
+		System.out.println("生成的样本个数为："+output.size());
 		//将生成的样本加入到handleInstances中
 		for(Instance inst: output) {
 			handledInstances.add(inst);
 		}
-		 
+	}
+	
+	/*
+	 * TODO:按照类标对整个数据集进行拆分
+	 * RETURN:得到一个经过类别拆分的对象
+	 * */
+	public List<List<Instance>> splitByClass() {
+		int numOfClass = instancesSet.rawInstances.numClasses();
+		List<List<Instance>> instancesByClass = new ArrayList<List<Instance>>();
+		for(int i = 0; i < numOfClass; ++i) {
+			List<Instance> temp = new ArrayList<>();
+			instancesByClass.add(temp);
+		}
+		for(Instance inst: handledInstances) {
+			int classLabel = (int)inst.classValue();
+			//获得类标为classLabel的List，并将其加入其中
+			instancesByClass.get(classLabel).add(inst);
+		}
+		return instancesByClass;
 	}
 	
 	/*
@@ -204,7 +232,6 @@ public class Individual  implements Serializable{
 			n[i] = (int) Math.floor(generatesize / minoritySize);
 		}
 		int flag = n[0];
-
 		int reminder = generatesize - (int) Math.floor(generatesize / minoritySize) * minoritySize;
 		// println(minoritySamples.size());
 		for (int i = 0; i < reminder;) {
@@ -269,13 +296,13 @@ public class Individual  implements Serializable{
 	}
 	
 	/*
-	 * TODO: 对对象进行深复制
+	 * TODO: 对 对象进行深复制
 	 * RETURN: 返回一个经过深复制后的Object对象
 	 * */
 	public Object deepCopy() throws ClassNotFoundException {
 		Object desObject = null;
 		try {
-			//1. 将srcObject对象写入ByteArray中
+			//1. 将srcObject对象写入ByteArray流中
 			ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 			ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
 			objectOutputStream.writeObject(this);

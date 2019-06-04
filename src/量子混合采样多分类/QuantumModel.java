@@ -6,6 +6,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.FormatFlagsConversionMismatchException;
 
 public class QuantumModel {
 	public Individual[] population; // 种群个体
@@ -60,9 +61,8 @@ public class QuantumModel {
 			// 5.利用量子门更新每一个个体
 			for (int i = 0; i < population.length; ++i) {
 				//1.首先根据最优个体和当前个体计算旋转方向和旋转角度
-				double angle = updateAngle(population[i], gBestIndividual);
+				double angle[] = updateAngle(population[i], gBestIndividual);
 				//2.根据旋转角对量子位进行旋转
-				
 				population[i].phaseRotate(angle);
 			}
 			T--;
@@ -77,12 +77,31 @@ public class QuantumModel {
 	 * TODO: 根据个体currentIndividual和全局最优globalBestIndividual调整旋转角度
 	 * RETURN: 返回更新后的旋转角度
 	 * */
-	public double updateAngle(Individual currIndividual, Individual globalIndividual) {
-		double angle = 0.0*Math.PI;
-		
+	public double[] updateAngle(Individual currIndividual, Individual globalIndividual) {
+		//1. 首先根据当前个体和最优个体计算旋转方向
+		int[] direction = rotateDirection(currIndividual, globalIndividual);
+		double angle[] = new double[currIndividual.flag.length];
+		for(int i = 0; i < currIndividual.flag.length; ++i) {
+			if(direction[i] == 0) {continue;}
+			angle[i] = setting.minRotateAngle+(setting.maxRotateAngle - setting.minRotateAngle)*hamingDistance(currIndividual, globalIndividual);
+			angle[i] = angle[i]*direction[i];
+		}
 		return angle;
 	}
 	
+	/*
+	 * TODO: 计算两个向量的海明距离
+	 * */
+	public int hamingDistance(Individual currIndividual, Individual globalIndividual) {
+		int hamingDistance = 0;
+		for(int i = 0; i < currIndividual.flag.length; ++i) {
+			if(currIndividual.flag[i] != globalIndividual.flag[i]) {
+				hamingDistance++;
+			}
+		}
+		hamingDistance /= currIndividual.flag.length;
+		return hamingDistance;
+	}
 	/*
 	 * TODO: 根据论文《基于改进量子进化算法的特征选择》中的转向策略表得到当前个体每一个量子位的转向
 	 * RETURN: -1: 逆时针 +1: 顺时针  0: 不需要旋转
@@ -94,10 +113,58 @@ public class QuantumModel {
 		for(int i = 0; i < direction.length; ++i) {
 			double alpha = currIndividual.phase[i].alpha;
 			double beta = currIndividual.phase[i].beta;
+			int a = currIndividual.flag[i];
+			int b = globalIndividual.flag[i];
+			boolean tag = 
+				globalIndividual.fitness > currIndividual.fitness ? true : false;
 			
+			if(alpha * beta > 0) {
+				//1. -1
+				if(a == 1 && b == 1) { direction[i] = -1;}
+				if(a == 1 && b == 0 && !tag) {direction[i] = -1;}
+				if(a == 0 && b == 1 && tag) {direction[i] = -1;}
+				//2. +1
+				if(a == 0 && b == 0) { direction[i] = 1;}
+				if(a == 1 && b == 0 && tag) {direction[i] = 1;}
+				if(a == 0 && b == 1 && !tag) {direction[i] = 1;}
+			}
+			if(alpha * beta < 0) {
+				//1. -1
+				if(a == 1 && b == 1) { direction[i] = 1;}
+				if(a == 1 && b == 0 && !tag) {direction[i] = 1;}
+				if(a == 0 && b == 1 && tag) {direction[i] = 1;}
+				//2. +1
+				if(a == 0 && b == 0) { direction[i] = -1;}
+				if(a == 1 && b == 0 && tag) {direction[i] = -1;}
+				if(a == 0 && b == 1 && !tag) {direction[i] = -1;}
+			}
+			if(Math.abs(alpha)<0.00005) {
+				//1.0
+				if(a == 1 && b == 1) { direction[i] = 0;}
+				if(a == 1 && b == 0 && !tag) {direction[i] = 0;}
+				if(a == 0 && b == 1 && tag) {direction[i] = 0;}
+				//2. +1
+				if(a == 0 && b == 0) { direction[i] = -1;}
+				if(a == 1 && b == 0 && tag) {direction[i] = -1;}
+				if(a == 0 && b == 1 && !tag) {direction[i] = -1;}
+			}
+			if(Math.abs(beta)<0.00005) {
+				//1. +1
+				if(a == 1 && b == 1) { direction[i] = 1;}
+				if(a == 1 && b == 0 && !tag) {direction[i] = 1;}
+				if(a == 0 && b == 1 && tag) {direction[i] = 1;}
+				//2. 0
+				if(a == 0 && b == 0) { direction[i] = 0;}
+				if(a == 1 && b == 0 && tag) {direction[i] = 0;}
+				if(a == 0 && b == 1 && !tag) {direction[i] = 0;}
+			}
 		}
 		return direction;
 	}
+	
+	/*
+	 * TODO: 根据alpha, beta来查找旋转方向对照表
+	 * */
 	/*
 	 * TODO: 更新每个个体的旋转角度
 	 * RETURN: 返回当前个体在在下一次旋转时的旋转角度
@@ -136,6 +203,27 @@ public class QuantumModel {
 	
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
+		/*
+		Setting setting = new Setting(4, 6, 20, 200, 30,Enum_Classifier.C45);
+		InstancesSet instancesSet = new InstancesSet("dataset/pima.arff", setting);
+		instancesSet.initializeInstancesSet(0);
+		QuantumModel quantumModel = new QuantumModel(setting, instancesSet);
+		quantumModel.initializePopulation();
+		for (int i = 0; i < quantumModel.population.length; ++i) {
+			quantumModel.population[i].mixedSampling();
+			quantumModel.population[i].calFitness(setting.cls);
+		}
+		Individual localIndividual = quantumModel.population[0];
+		localIndividual.phase[0].beta = 0;
+		localIndividual.flag[0] = 0;
+		Individual globalIndividual = quantumModel.population[1];
+		globalIndividual.flag[0] = 0;
+		
+		globalIndividual.fitness = localIndividual.fitness-1;
+		int[] direction = quantumModel.rotateDirection(localIndividual, globalIndividual);
+		System.out.println(direction[0]);
+		return ;
+		*/
 		String[] dataSets = { "glass1", "pima", "glass0", "yeast1", "vehicle1", "glass0123vs456", "ecoli1",
 				"newthyroid1", "newthyroid2", "ecoli2", "glass6", "yeast3", "ecoli3", "glass016v2", "yeast1v7",
 				"glass4", "glass5", "yeast2v8", "yeast4", "yeast6" };
