@@ -52,6 +52,7 @@ public class DataVisualization {
 					","+(int)instancesSet.originInstances.get(i).classValue()+","+instancesSet.instanceOfMargin.get(i)+"\n");
 		}
 		fw.close();
+		System.out.print("分支Dev测试语句");
 		//3.通过JQuery对json文件进行读取，然后调用echart插件对数据进行可视化显示
 		/*
         ProcessBuilder proc = new ProcessBuilder("D:\\SoftInstall\\360BS\\360Chrome\\Chrome\\Application\\360chrome.exe","--allow-file-access-from-files"
