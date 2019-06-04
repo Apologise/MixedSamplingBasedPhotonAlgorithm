@@ -9,8 +9,11 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 
@@ -25,14 +28,14 @@ import weka.core.Instance;
 import weka.core.Instances;
 
 public class Individual  implements Serializable{
-	public List<Instance> handledInstances;	//处理后的样本集合，用作计算该个体的适应度
+	public List<Instance> handledInstances;	//经过欠采样和过采样后的样本集合
 	public int[] flag;
 	public Phase[] phase;
 	public double fitness; //个体的适应度
 	public Setting setting;
 	public InstancesSet instancesSet;
 	public Instances handledMajorityInstances;
-	public List<List<Instance>> instanceByClass;
+	public List<List<Instance>> instancesByClass;
 
 	public Individual(Setting setting, InstancesSet instancesSet) {
 		this.setting = setting;
@@ -45,9 +48,9 @@ public class Individual  implements Serializable{
 	 * */
 	public void initializeIndividual() {
 		handledInstances = new ArrayList<Instance>();
-		flag = new int[instancesSet.indexOfInstancesInMajorityInstancesIntoPopulation.size()];
-		phase = new Phase[instancesSet.indexOfInstancesInMajorityInstancesIntoPopulation.size()];
-		for(int i = 0; i < instancesSet.indexOfInstancesInMajorityInstancesIntoPopulation.size(); ++i) {
+		flag = new int[instancesSet.originInstances.size()];
+		phase = new Phase[instancesSet.originInstances.size()];
+		for(int i = 0; i < instancesSet.originInstances.size(); ++i) {
 			phase[i] = new Phase();
 		}
 		handledMajorityInstances = new Instances(instancesSet.rawInstances);
@@ -94,30 +97,15 @@ public class Individual  implements Serializable{
 	 * RETURN：返回一个经过处理后的样本集合
 	 * */
 	public void mixedSampling() {
-		//先清空handledInstances集合和handledMajorityInstances集合
+		//1. 先清空handledInstances集合和handledMajorityInstances集合
 		handledInstances.clear();
 		handledMajorityInstances.clear();
-		//将少数类样本加入到handledInstnaces中
-		
-		//将多数类加入到handledMajorityInstances中
-		for(Instance inst: instancesSet.majorityInstances) {
+		//2. 将originInstances样本加入到handledInstances中进行处理
+		for(Instance inst : instancesSet.originInstances) {
 			handledInstances.add(inst);
 		}
-//		System.out.println("原始的少数类样本个数:"+handledInstances.size()+"原始多数类样本个数："+instancesSet.majorityInstances.size());
 		underSampling();
-		//将处理后的多数类样本加入到handledMajorityInstances中
-		for(Instance inst: handledInstances) {
-			handledMajorityInstances.add(inst);
-		}
-		for(Instance inst: instancesSet.minorityInstances) {
-			handledInstances.add(inst);
-		}
-		
-		
-		System.out.println("过采样前样本的个数："+handledInstances.size());
 		overSampling();
-		System.out.println("过采样后样本的个数："+handledInstances.size());
-	//	System.out.println("处理后样本个数为"+handledInstances.size());
 	}
 	
 
@@ -130,7 +118,7 @@ public class Individual  implements Serializable{
 		List<Integer> indexOfRemovedInstances = new ArrayList<>();
 		for(int i = 0; i < flag.length; ++i) {
 			if(flag[i] == 0) {
-				indexOfRemovedInstances.add(instancesSet.indexOfInstancesInMajorityInstancesIntoPopulation.get(i));
+				indexOfRemovedInstances.add(i);
 			}
 		}
 		Collections.sort(indexOfRemovedInstances, new Comparator<Integer>() {
@@ -148,10 +136,9 @@ public class Individual  implements Serializable{
 			}
 			
 		});
-		List<Instance> majorityInstances = instancesSet.majorityInstances;
 		for(int i = 0; i < indexOfRemovedInstances.size(); ++i) {
 			int index = indexOfRemovedInstances.get(i);
-			Instance inst = majorityInstances.get(index);
+			Instance inst = instancesSet.originInstances.get(index);
 			handledInstances.remove(inst);
 		}
 	}
@@ -166,32 +153,27 @@ public class Individual  implements Serializable{
 		Iterator<Integer> iterator = labels.iterator();
 		GenerateSample generator = new GenerateSample(setting);
 		List<Instance> output = new ArrayList<>();
-		int average = handledInstances.size()/instancesSet.rawInstances.numClasses();
 		int  numClass = instancesSet.rawInstances.numClasses();
+		int average = handledInstances.size()/numClass;
 		//1. 首先将所有样本按照类标进行拆分，此时存储所有样本的对象为handledInstances
-		instanceByClass = splitByClass();
-		//System.out.println("平均样本个数为："+average);
+		instancesByClass = splitByClass();
+		//2. 对每一个少数类进行过采样
 		for(int classValue = 0; classValue < numClass; classValue++){
-			List<Instance> instances = instanceByClass.get(classValue);
-			//如果少数类样本多于平均的样本数量，那么就不需要进行过采样
+			List<Instance> instances = instancesByClass.get(classValue);
+			//2. 如果少数类样本多于平均的样本数量，那么就不需要进行过采样
 			if(instances.size() > average) {
 				continue;
 			}
-			int[] n = calInstanceToGenerate(instancesSet.minorityInstances, average);
-			//针对instances进行过采样
-			Instances tempInstancesMajority = new Instances(instancesSet.rawInstances);
-			tempInstancesMajority.clear();
-			for(Instance inst: handledMajorityInstances) {
-				tempInstancesMajority.add(inst);
+			//2.2 根据个体的flag筛选结果计算少选后的少数类进行欠采样的个数（不需要欠采样的样本值为0，反之不为0）
+			int[] n = calInstanceToGenerate(instances, average);
+			//2.3 根据当前经过欠采样后的样本进行计算类别间距
+			Map<Integer, Double> instancesOfMargin = calMargin();
+			//针对instanceOfMargin进行过采样
+			for(Entry<Integer, Double> entry: instancesOfMargin.entrySet()) {
+				Instance inst = generateSample(entry, classValue);
+				output.add(inst);
 			}
-			Instances tempInstancesMinority = new Instances(instancesSet.rawInstances);
-			tempInstancesMinority.clear();
-			for(Instance inst: instances) {
-				tempInstancesMinority.add(inst);
-			}
-			for(int i = 0; i < instances.size(); ++i) {
-				generator.generateSample(instances.get(i), tempInstancesMinority, tempInstancesMajority, output, n[i]);
-			}
+			
 		}
 		
 		System.out.println("生成的样本个数为："+output.size());
@@ -200,6 +182,107 @@ public class Individual  implements Serializable{
 			handledInstances.add(inst);
 		}
 	}
+	
+	/*
+	 * TODO: 根据样本的Margin生成一个样本
+	 * RETURN: 返回一个生成的样本
+	 * */
+	public Instance generateSample(Entry<Integer, Double> entry, double classValue) {
+		//1. 初始化一个单位方向向量
+		int dimensionSize = handledInstances.get(0).numAttributes();
+		double[] directionVector = new double[dimensionSize];
+		int sum2 = 0;	//变量sum2保存向量的2范数的平方
+		for(int i = 0; i < dimensionSize-1; ++i) {
+			Random rand = new Random();
+			int value = rand.nextInt(10);
+			directionVector[i] = value;
+			sum2 += value*value;
+		}
+		double tempSum2 = Math.sqrt(sum2);
+		//2.将方向向量单位化
+		for(int i = 0; i < dimensionSize; ++i) {
+			directionVector[i] = directionVector[i]/tempSum2;
+		}
+		//3. 随机化[0,margin]的随机数
+		double margin = entry.getValue();
+		double rand = Math.random()*margin;
+		//4.根据得到的随机数，生成新样本
+		double[] instanceValue = new double[dimensionSize];
+		Instance currInst = instancesSet.originInstances.get(entry.getKey());
+		for(int i = 0; i < dimensionSize; ++i) {
+			instanceValue[i] = currInst.value(i)+rand*directionVector[i];
+		}
+		//4.1 为样本设置类标
+		instanceValue[dimensionSize-1] = classValue;
+		Instance newInstance = handledInstances.get(0).copy(instanceValue);
+		return newInstance;
+	}
+	
+	/*
+	 * TODO: 计算每个样本的margin
+	 * RETURN: 修改List<Double>类型变量margin
+	 * */
+	
+	public Map<Integer, Double> calMargin() {
+		Map<Integer, Double> instanceOfMargin = new HashMap<>();
+		List<List<Double>> distanceMatrix = initializeDistanceMatrix(handledInstances);
+		for(int i = 0; i < handledInstances.size(); ++i) {
+			List<Double> distance = distanceMatrix.get(i);
+			
+			//找到最近距离的同类样本点，更新indexOfNearestHit
+			int indexOfNearestHit = -1, indexOfNearestMiss = -1;
+			double tempMinDistanceOfNearestHit = Double.MAX_VALUE, tempMinDistanceOfNearestMiss = Double.MAX_VALUE;
+			for(int j = 0; j < distance.size(); ++j) {
+				if(i == j) {continue;}
+				//寻找同类样本点的最近距离，更新indexOfNearestHit和tempMinDistanceOfNearestHit
+				int classLabel1 = (int)handledInstances.get(i).classValue();
+				int classLabel2 = (int)handledInstances.get(j).classValue();
+				if(classLabel1 == classLabel2 && distance.get(j) < tempMinDistanceOfNearestHit) {
+					tempMinDistanceOfNearestHit = distance.get(j);
+					indexOfNearestHit = j;
+				}
+				//寻找异类样本点的最近距离，更新indexOfNearestMiss和tempMinDistanceOfNearestMiss
+				if(classLabel1 != classLabel2 && distance.get(j) < tempMinDistanceOfNearestMiss) {
+					tempMinDistanceOfNearestMiss = distance.get(j);
+					indexOfNearestMiss = j;
+				}
+			}
+			//找到了同类最近距离和异类最近距离，就可以求出样本i的margin
+			double margin = 0.5*(tempMinDistanceOfNearestMiss-tempMinDistanceOfNearestHit);
+			if(margin < 0) {
+				margin = 0;
+			}
+			instanceOfMargin.put(i, margin);
+		}
+		return instanceOfMargin;
+	}
+	
+	public List<List<Double>> initializeDistanceMatrix(List<Instance> instances) {
+		List<List<Double>> distanceMatrix = new ArrayList<List<Double>>();
+		for(Instance first: instances) {
+
+			List<Double> tempDistance = new ArrayList<>();
+			for(Instance second: instances) {
+				if(first == second) {
+					tempDistance.add(Double.MAX_VALUE);
+				}else {
+					tempDistance.add(calDistance(first, second));
+				}
+			}
+			distanceMatrix.add(tempDistance);
+		}
+		return distanceMatrix;
+	}
+	
+	public static double calDistance(Instance first, Instance second) {
+		double distance = 0;
+		for(int i = 0; i < first.numAttributes()-1; ++i) {
+			double diff = first.value(i) - second.value(i);
+			distance += diff*diff;
+		}
+		return Math.sqrt(distance);
+	}
+
 	
 	/*
 	 * TODO:按照类标对整个数据集进行拆分
@@ -225,30 +308,47 @@ public class Individual  implements Serializable{
 	 * RETURN： 每个样本的近邻数组
 	 * */
 	public int[] calInstanceToGenerate(List<Instance> minority, int average) {
-		int minoritySize = minority.size(), majoritySize = average;
-		int[] n = new int[minoritySize];
-		int generatesize = majoritySize - minoritySize;
-		for (int i = 0; i < minoritySize; ++i) {
-			n[i] = (int) Math.floor(generatesize / minoritySize);
+		int classLabel = (int)minority.get(0).classValue();
+		int minoritySize = minority.size();
+		int[] n = new int[handledInstances.size()];
+		int generatesize = average - minoritySize;
+		List<Instance> instancesToOverSampling = new ArrayList<>();
+		//1. 将需要过采样的样本的下标记录到instancesToOverSampling,并统计其个数
+		for (int i = 0; i < flag.length; ++i) {
+			if(flag[i] == 1) {
+				Instance inst = instancesSet.originInstances.get(i);
+				if((int)inst.classValue() == classLabel) {
+					instancesToOverSampling.add(inst);
+				}
+			}
 		}
-		int flag = n[0];
-		int reminder = generatesize - (int) Math.floor(generatesize / minoritySize) * minoritySize;
+		for (int i = 0; i < flag.length; ++i) {
+			if(flag[i] == 1) {
+				Instance inst = instancesSet.originInstances.get(i);
+				if((int)inst.classValue() == classLabel) {
+					n[i] = generatesize / instancesToOverSampling.size();
+				}
+			}
+		}
+
+		int reminder = generatesize % instancesToOverSampling.size();
 		// println(minoritySamples.size());
 		for (int i = 0; i < reminder;) {
 			Random rand = new Random();
-			int index = rand.nextInt(minoritySize);
-			if (n[index] == flag) {
+			int index = rand.nextInt(n.length);
+			Instance inst = instancesSet.originInstances.get(index);
+			if (flag[index] == 1 && ((int)inst.classValue() == classLabel)) {
 				n[index]++;
 				i++;
 			} else {
 			}
-
 		}
 
 		int count = 0;
 		for (int i = 0; i < minoritySize; ++i) {
 			count += n[i];
 		}
+		System.out.println("需要生成的样本总数为"+ count);
 		return n;
 	}
 	/*
@@ -256,7 +356,6 @@ public class Individual  implements Serializable{
 	 * RETUN: 修改了flag数组
 	 * */
 	public void watchByPhase() {
-		List<Double> weight = instancesSet.weightOfMajorityInstance;
 		for(int i = 0; i < phase.length; ++i) {
 			double rand = Math.random();
 			if(phase[i].alpha*phase[i].alpha < rand) {

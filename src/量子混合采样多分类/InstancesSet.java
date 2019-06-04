@@ -30,12 +30,12 @@ public class InstancesSet implements Serializable{
 	public int noisyK;	//判定是否为噪声的参数K
 	public List<Instance> majorityInstances;
 	public List<Double> weightOfMajorityInstance;	//多数类样本的权重
-	public List<Instance> minorityInstances;
-	public List<List<Instance>> instancesByClass;
-	public Set<Integer> minorityClassLabel;
-	public Instances validateInstances;
-	public List<Double> instanceOfMargin;
-	public List<Integer> indexOfInstancesInMajorityInstancesIntoPopulation;
+	public List<Instance> minorityInstances;		//少数类样本的权重
+	public List<List<Instance>> instancesByClass;	//对整个数据集进行拆分后，每个类样本的集合
+	public Set<Integer> minorityClassLabel;			//少数类的类标
+	public Instances validateInstances;				//测试集
+	public List<Double> instanceOfMargin;			//样本的安全间距
+	public List<Integer> indexOfInstancesInMajorityInstancesIntoPopulation;	//需要进行欠采样的多数类样本
 	public int fold;
 	
 	public InstancesSet(String fileName, Setting setting) {
@@ -59,8 +59,10 @@ public class InstancesSet implements Serializable{
 		//移除重复样本
 		removeDuplicateInstance();
 		initializeDistanceMatrix(rawInstances);
+		/*
 		//将数据集进行归一化
 		rawInstances = normalizeInstances(rawInstances);
+		*/
 		initializeDistanceMatrix(rawInstances);
 		removeNoiseInstance();
 		//将移除噪声后的数据集的样本加入到originInstances集合中
@@ -74,12 +76,7 @@ public class InstancesSet implements Serializable{
 		//移除噪声后计算样本间距
 		instanceOfMargin = new ArrayList<>();
 		calMargin();
-		//根据类标将整个原始数据集进行拆分存放于instancesByClass
-		instancesByClass = new ArrayList<List<Instance>>();
-		for(int i = 0; i < rawInstances.numClasses(); ++i) {
-			List<Instance> temp = new ArrayList<>();
-			instancesByClass.add(temp);
-		}
+		
 		minorityClassLabel = new HashSet<>();
 		splitByClass();
 		//将origin集合划分为多数类和少数类样本
