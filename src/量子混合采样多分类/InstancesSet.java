@@ -31,11 +31,10 @@ public class InstancesSet implements Serializable{
 	public List<Instance> majorityInstances;
 	public List<Double> weightOfMajorityInstance;	//多数类样本的权重
 	public List<Instance> minorityInstances;		//少数类样本的权重
-	public List<List<Instance>> instancesByClass;	//对整个数据集进行拆分后，每个类样本的集合
 	public Set<Integer> minorityClassLabel;			//少数类的类标
 	public Instances validateInstances;				//测试集
 	public List<Double> instanceOfMargin;			//样本的安全间距
-	public List<Integer> indexOfInstancesInMajorityInstancesIntoPopulation;	//需要进行欠采样的多数类样本
+
 	public int fold;
 	
 	public InstancesSet(String fileName, Setting setting) {
@@ -51,8 +50,9 @@ public class InstancesSet implements Serializable{
 		InstanceDao instanceDao = new InstanceDao();
 		String[] trainSet = Dataset.chooseDataset(fileName, 0);
 		String[] testSet = Dataset.chooseDataset(fileName, 1);
-		rawInstances = instanceDao.loadDataFromFile("dataset/iris.2D.arff");
-		validateInstances = instanceDao.loadDataFromFile("dataset/iris.2D.arff");
+		rawInstances = instanceDao.loadDataFromFile("dataset/"+trainSet[curFold]);
+	
+		validateInstances = instanceDao.loadDataFromFile("dataset/"+testSet[curFold]);
 		//初始化距离矩阵
 		distanceMatrix = new ArrayList<List<Double>>();
 		initializeDistanceMatrix(rawInstances);
@@ -63,37 +63,17 @@ public class InstancesSet implements Serializable{
 		//将数据集进行归一化
 		rawInstances = normalizeInstances(rawInstances);
 		*/
+		/*
 		initializeDistanceMatrix(rawInstances);
 		removeNoiseInstance();
 		//将移除噪声后的数据集的样本加入到originInstances集合中
-
+		 */
 		originInstances = new ArrayList<>();
 		for(int i = 0; i < rawInstances.size(); ++i) {
 			originInstances.add(rawInstances.get(i));
 		}
 		//获得移除噪声后的距离矩阵(因为样本会减少，因此样本矩阵的行列也会变化)
 		initializeDistanceMatrixAfterRemoveNoise(originInstances);
-		//移除噪声后计算样本间距
-		instanceOfMargin = new ArrayList<>();
-		calMargin();
-		
-		minorityClassLabel = new HashSet<>();
-		splitByClass();
-		//将origin集合划分为多数类和少数类样本
-		majorityInstances = new ArrayList<>();
-		minorityInstances = new ArrayList<>();
-		for(Instance inst: originInstances) {
-			if(isMajorityClass(inst)) {
-				majorityInstances.add(inst);
-			}else {
-				minorityInstances.add(inst);
-			}
-		}
-		weightOfMajorityInstance = new ArrayList<>();
-		calWeight();
-		indexOfInstancesInMajorityInstancesIntoPopulation = new ArrayList<>();
-		indexOfInstancesInMajorityInstancesIntoPopulation = getIndexOfInstanceToPopulation();
-
 	}
 	/*
 	 * TODO: 将从文件中读取的数据规范化
@@ -203,40 +183,7 @@ public class InstancesSet implements Serializable{
 			System.out.println(inst);
 		}
 	}
-	
-	/*
-	 * TODO:按照类标对整个数据集进行拆分
-	 * RETURN:拆分后修改List<List<Instances>>类型的对象instancesByClass，第一维的访问下标即为类标
-	 * */
-	public void splitByClass() {
-		for(Instance inst: originInstances) {
-			int classLabel = (int)inst.classValue();
-			//获得类标为classLabel的List，并将其加入其中
-			List<Instance> instances = instancesByClass.get(classLabel);
-			instances.add(inst);
-		}
-	}
-	
-	/*
-	 * TODO：判断一个样本是否为多数类
-	 * RETURN:
-	 *        true:该类别为多数类
-	 *        false:该类别为少数类
-	 * 
-	 * */
-	public boolean isMajorityClass(Instance inst) {
-		boolean flag = false;
-		int classLabel = (int)inst.classValue();
-		int theSizeOfClassLabel = instancesByClass.get(classLabel).size();
-		int averageSize = originInstances.size()/rawInstances.numClasses();
-		if(theSizeOfClassLabel > averageSize) {
-			flag = true;
-		}
-		if(flag == false) {
-			minorityClassLabel.add(classLabel);
-		}
-		return flag;
-	}
+
 	
 	/*
 	 * TODO: 计算多数类样本集合中每一个样本的权重

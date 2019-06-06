@@ -149,9 +149,6 @@ public class Individual  implements Serializable{
 	 * */
 	public void overSampling() {
 		//计算少数类样本的个数和多数类样本的个数
-		Set<Integer> labels = instancesSet.minorityClassLabel;
-		Iterator<Integer> iterator = labels.iterator();
-		GenerateSample generator = new GenerateSample(setting);
 		List<Instance> output = new ArrayList<>();
 		int  numClass = instancesSet.rawInstances.numClasses();
 		int average = handledInstances.size()/numClass;
@@ -168,15 +165,15 @@ public class Individual  implements Serializable{
 			int[] n = calInstanceToGenerate(instances, average);
 			//2.3 根据当前经过欠采样后的样本进行计算类别间距
 			Map<Integer, Double> instancesOfMargin = calMargin();
-			//针对instanceOfMargin进行过采样
+			//2.4 针对instanceOfMargin进行过采样
 			for(Entry<Integer, Double> entry: instancesOfMargin.entrySet()) {
-				Instance inst = generateSample(entry, classValue);
-				output.add(inst);
+				for(int i = 0; i < n[entry.getKey()]; ++i) {
+					Instance inst = generateSample(entry, classValue);
+					output.add(inst);
+				}
 			}
 			
 		}
-		
-		System.out.println("生成的样本个数为："+output.size());
 		//将生成的样本加入到handleInstances中
 		for(Instance inst: output) {
 			handledInstances.add(inst);
@@ -185,6 +182,7 @@ public class Individual  implements Serializable{
 	
 	/*
 	 * TODO: 根据样本的Margin生成一个样本
+	 * Entry<Integer, Double> entry: Integer为样本的下标，Double为对应样本的安全间距， classValue为当前采样类的类标
 	 * RETURN: 返回一个生成的样本
 	 * */
 	public Instance generateSample(Entry<Integer, Double> entry, double classValue) {
@@ -192,28 +190,32 @@ public class Individual  implements Serializable{
 		int dimensionSize = handledInstances.get(0).numAttributes();
 		double[] directionVector = new double[dimensionSize];
 		int sum2 = 0;	//变量sum2保存向量的2范数的平方
+		//1.1 随机生成[-10,10]的方向向量
 		for(int i = 0; i < dimensionSize-1; ++i) {
 			Random rand = new Random();
-			int value = rand.nextInt(10);
+			int value = rand.nextInt(20)-10;
 			directionVector[i] = value;
 			sum2 += value*value;
 		}
 		double tempSum2 = Math.sqrt(sum2);
-		//2.将方向向量单位化
+		//1. 2.将方向向量单位化
 		for(int i = 0; i < dimensionSize; ++i) {
 			directionVector[i] = directionVector[i]/tempSum2;
 		}
-		//3. 随机化[0,margin]的随机数
-		double margin = entry.getValue();
-		double rand = Math.random()*margin;
-		//4.根据得到的随机数，生成新样本
+		
+		//2.根据得到的随机数，生成新样本
 		double[] instanceValue = new double[dimensionSize];
 		Instance currInst = instancesSet.originInstances.get(entry.getKey());
 		for(int i = 0; i < dimensionSize; ++i) {
+			//2.1 随机化[0,margin]的随机数
+			double margin = entry.getValue();
+			double rand = Math.random()*margin;
+			//2.2 将[0.margin]乘以方向向量
 			instanceValue[i] = currInst.value(i)+rand*directionVector[i];
 		}
-		//4.1 为样本设置类标
+		//3.1 为样本设置类标
 		instanceValue[dimensionSize-1] = classValue;
+		//4. 得到新的合成样本
 		Instance newInstance = handledInstances.get(0).copy(instanceValue);
 		return newInstance;
 	}
@@ -228,7 +230,6 @@ public class Individual  implements Serializable{
 		List<List<Double>> distanceMatrix = initializeDistanceMatrix(handledInstances);
 		for(int i = 0; i < handledInstances.size(); ++i) {
 			List<Double> distance = distanceMatrix.get(i);
-			
 			//找到最近距离的同类样本点，更新indexOfNearestHit
 			int indexOfNearestHit = -1, indexOfNearestMiss = -1;
 			double tempMinDistanceOfNearestHit = Double.MAX_VALUE, tempMinDistanceOfNearestMiss = Double.MAX_VALUE;
@@ -310,7 +311,7 @@ public class Individual  implements Serializable{
 	public int[] calInstanceToGenerate(List<Instance> minority, int average) {
 		int classLabel = (int)minority.get(0).classValue();
 		int minoritySize = minority.size();
-		int[] n = new int[handledInstances.size()];
+		int[] n = new int[instancesSet.originInstances.size()];
 		int generatesize = average - minoritySize;
 		List<Instance> instancesToOverSampling = new ArrayList<>();
 		//1. 将需要过采样的样本的下标记录到instancesToOverSampling,并统计其个数
@@ -348,7 +349,6 @@ public class Individual  implements Serializable{
 		for (int i = 0; i < minoritySize; ++i) {
 			count += n[i];
 		}
-		System.out.println("需要生成的样本总数为"+ count);
 		return n;
 	}
 	/*
@@ -360,6 +360,8 @@ public class Individual  implements Serializable{
 			double rand = Math.random();
 			if(phase[i].alpha*phase[i].alpha < rand) {
 				flag[i] = 1;
+			}else {
+				flag[i] = 0;
 			}
 		}
 	}
@@ -422,15 +424,11 @@ public class Individual  implements Serializable{
 		// TODO Auto-generated method stub
 		Enum_Classifier classifier = Enum_Classifier.C45;
 		Setting setting  = new Setting(100, 4, 4, 10, 30, classifier);
-		InstancesSet instancesSet = new InstancesSet("pima", setting);
+		InstancesSet instancesSet = new InstancesSet("test", setting);
 		instancesSet.initializeInstancesSet(0);
 		Individual individual = new Individual(setting, instancesSet);
 		individual.initializeIndividual();
 		individual.watchByPhase();
 		individual.mixedSampling();
-		Individual newIndividual = (Individual)individual.deepCopy();
-		individual.calFitness(setting.cls);
-		individual.handledInstances.get(0).setValue(0, -1);
-		System.out.println(individual.fitness);
 	}
 }

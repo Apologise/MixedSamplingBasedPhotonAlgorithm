@@ -29,6 +29,7 @@ public class QuantumModel {
 	 */
 	public void run() throws Exception {
 		System.out.println("量子模型->Starting...");
+		FileWriter fw1 = new FileWriter("dataset/个体优化记录.dat",false);
 		// 1. 初始化种群
 		initializePopulation();
 		int T = iter;
@@ -37,9 +38,10 @@ public class QuantumModel {
 			// System.out.println("第"+(iter-T+1)+"次迭代");
 			// 2. 对所有的个体进行观测
 			for (int i = 0; i < population.length; ++i) {
-				if (iter - T + 1 == 3) {
-					population[i].watchByPhase();
+				if(i == 0) {
+					System.out.println();
 				}
+					population[i].watchByPhase();
 			}
 			// 3. 根据观测结果，对每个个体进行评价
 			// a.根据flag数组，对数据集进行混合采样
@@ -47,8 +49,16 @@ public class QuantumModel {
 			for (int i = 0; i < population.length; ++i) {
 				population[i].mixedSampling();
 				population[i].calFitness(setting.cls);
+				System.out.println(population[i].fitness);
 			}
-
+			//写入第一个个体的具体详情
+			fw1.write("个体: "+population[0].fitness+"\n");
+			for(int i = 0; i < population[0].flag.length; ++i) {
+				fw1.write(""+population[0].flag[i]);
+			}
+			fw1.write("\n");
+			System.out.println("样本的数量为："+population[0].handledInstances.size());
+	
 			// 4.根据适应度保留最佳个体
 			if (T == iter) {
 				gBestIndividual = (Individual)getLocalBestIndividual().deepCopy();
@@ -58,6 +68,13 @@ public class QuantumModel {
 					gBestIndividual = (Individual)lBestIndividual.deepCopy();
 				}
 			}
+			//写入最优个体的具体详情
+			fw1.write("最优个体: "+gBestIndividual.fitness+"\n");
+			for(int i = 0; i < gBestIndividual.flag.length; ++i) {
+				fw1.write(""+gBestIndividual.flag[i]);
+			}
+			fw1.write("\n");
+			System.out.println("最优个体的数量为："+gBestIndividual.handledInstances.size());
 			// 5.利用量子门更新每一个个体
 			for (int i = 0; i < population.length; ++i) {
 				//1.首先根据最优个体和当前个体计算旋转方向和旋转角度
@@ -65,12 +82,15 @@ public class QuantumModel {
 				//2.根据旋转角对量子位进行旋转
 				population[i].phaseRotate(angle);
 			}
+			System.out.println("当前迭代次数为"+(iter-T));
+			fw1.write("当前迭代次数为"+(iter-T)+"\n");
 			T--;
 		} while (T != 0);
 		System.out.println("量子模型->End...");
 		System.out.println("输出最优个体");
 		System.out.println(gBestIndividual.fitness);
 		System.out.println("算法运行结束");
+		fw1.close();
 	}
 	
 	/*
@@ -227,28 +247,24 @@ public class QuantumModel {
 		String[] dataSets = { "glass1", "pima", "glass0", "yeast1", "vehicle1", "glass0123vs456", "ecoli1",
 				"newthyroid1", "newthyroid2", "ecoli2", "glass6", "yeast3", "ecoli3", "glass016v2", "yeast1v7",
 				"glass4", "glass5", "yeast2v8", "yeast4", "yeast6" };
-		FileWriter fw = new FileWriter("dataset/基于边界的实验结果NB.dat", true);
-		for (int set = 0; set < dataSets.length; ++set) {
+		FileWriter fw = new FileWriter("dataset/dev0基于边界的实验结果C45.dat", true);
+		for (int set = 0; set <= 0; ++set) {
 			System.out.println("当前运行数据集为："+dataSets[set]);
 			int maxK = 1, maxNoiseK=2;
 			double maxFitness = 0;
 			int k = 1, noisyK = 2;
-			for (int tempK = 2; tempK <= 2; ++tempK) {
-				for (int tempNoiseK = 2; tempNoiseK <= 2; tempNoiseK++) {
-					Setting setting = new Setting(tempK, tempNoiseK, 20, 200, 30,Enum_Classifier.C45);
+			for (int tempK = 5; tempK <= 5; ++tempK) {
+				for (int tempNoiseK = 5; tempNoiseK <= 5; tempNoiseK++) {
+					Setting setting = new Setting(tempK, tempNoiseK, 10,500, 30,Enum_Classifier.C45);
 					InstancesSet instancesSet = new InstancesSet(dataSets[set], setting);
 					double sum = 0;
-					for (int i = 0; i < 5; ++i) {
-						try {
+					for (int i = 0; i <= 0; ++i) {
+						
 							instancesSet.initializeInstancesSet(i);
 							QuantumModel quantumModel = new QuantumModel(setting, instancesSet);
 							quantumModel.run();
 							sum += quantumModel.gBestIndividual.fitness;
-						}catch(Exception e) {
-							System.out.println("参数不符合模型要求，运行失败");
-						}
 					}
-					
 					if(maxFitness < sum) {
 						maxFitness = sum;
 						maxK = tempK;
