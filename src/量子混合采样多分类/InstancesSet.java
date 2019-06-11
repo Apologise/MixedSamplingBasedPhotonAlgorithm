@@ -63,12 +63,11 @@ public class InstancesSet implements Serializable{
 		//将数据集进行归一化
 		rawInstances = normalizeInstances(rawInstances);
 		*/
-		/*
-		initializeDistanceMatrix(rawInstances);
 		
-		//将移除噪声后的数据集的样本加入到originInstances集合中
-		 */
+		initializeDistanceMatrix(rawInstances);
 		removeNoiseInstance();
+		//将移除噪声后的数据集的样本加入到originInstances集合中
+		 
 		originInstances = new ArrayList<>();
 		for(int i = 0; i < rawInstances.size(); ++i) {
 			originInstances.add(rawInstances.get(i));
