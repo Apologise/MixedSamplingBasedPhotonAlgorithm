@@ -385,9 +385,6 @@ public class Individual  implements Serializable{
 		case NB:
 			classifier = new NaiveBayes();
 			break;
-		case MLP:
-			classifier = new MultilayerPerceptron();
-			break;
 		default:
 			System.out.println("Œ¥’“µΩ∏√À„∑®£°£°£°");
 			System.exit(0);
@@ -423,7 +420,7 @@ public class Individual  implements Serializable{
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		Enum_Classifier classifier = Enum_Classifier.C45;
-		Setting setting  = new Setting(100, 4, 4, 10, 30, classifier);
+		Setting setting  = new Setting( 4, 10,classifier);
 		InstancesSet instancesSet = new InstancesSet("test", setting);
 		instancesSet.initializeInstancesSet(0);
 		Individual individual = new Individual(setting, instancesSet);

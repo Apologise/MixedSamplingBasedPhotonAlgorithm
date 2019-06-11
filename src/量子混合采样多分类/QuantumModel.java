@@ -29,18 +29,13 @@ public class QuantumModel {
 	 */
 	public void run() throws Exception {
 		System.out.println("量子模型->Starting...");
-		FileWriter fw1 = new FileWriter("dataset/个体优化记录.dat",false);
 		// 1. 初始化种群
 		initializePopulation();
 		int T = iter;
 		do {
-
 			// System.out.println("第"+(iter-T+1)+"次迭代");
 			// 2. 对所有的个体进行观测
 			for (int i = 0; i < population.length; ++i) {
-				if(i == 0) {
-					System.out.println();
-				}
 					population[i].watchByPhase();
 			}
 			// 3. 根据观测结果，对每个个体进行评价
@@ -51,14 +46,6 @@ public class QuantumModel {
 				population[i].calFitness(setting.cls);
 				System.out.println(population[i].fitness);
 			}
-			//写入第一个个体的具体详情
-			fw1.write("个体: "+population[0].fitness+"\n");
-			for(int i = 0; i < population[0].flag.length; ++i) {
-				fw1.write(""+population[0].flag[i]);
-			}
-			fw1.write("\n");
-			System.out.println("样本的数量为："+population[0].handledInstances.size());
-	
 			// 4.根据适应度保留最佳个体
 			if (T == iter) {
 				gBestIndividual = (Individual)getLocalBestIndividual().deepCopy();
@@ -68,13 +55,6 @@ public class QuantumModel {
 					gBestIndividual = (Individual)lBestIndividual.deepCopy();
 				}
 			}
-			//写入最优个体的具体详情
-			fw1.write("最优个体: "+gBestIndividual.fitness+"\n");
-			for(int i = 0; i < gBestIndividual.flag.length; ++i) {
-				fw1.write(""+gBestIndividual.flag[i]);
-			}
-			fw1.write("\n");
-			System.out.println("最优个体的数量为："+gBestIndividual.handledInstances.size());
 			// 5.利用量子门更新每一个个体
 			for (int i = 0; i < population.length; ++i) {
 				//1.首先根据最优个体和当前个体计算旋转方向和旋转角度
@@ -83,14 +63,12 @@ public class QuantumModel {
 				population[i].phaseRotate(angle);
 			}
 			System.out.println("当前迭代次数为"+(iter-T));
-			fw1.write("当前迭代次数为"+(iter-T)+"\n");
 			T--;
 		} while (T != 0);
 		System.out.println("量子模型->End...");
 		System.out.println("输出最优个体");
 		System.out.println(gBestIndividual.fitness);
 		System.out.println("算法运行结束");
-		fw1.close();
 	}
 	
 	/*
@@ -104,7 +82,7 @@ public class QuantumModel {
 		for(int i = 0; i < currIndividual.flag.length; ++i) {
 			if(direction[i] == 0) {continue;}
 			angle[i] = setting.minRotateAngle+(setting.maxRotateAngle - setting.minRotateAngle)*hamingDistance(currIndividual, globalIndividual);
-			angle[i] = angle[i]*direction[i];
+			angle[i] = -angle[i]*direction[i];
 		}
 		return angle;
 	}
@@ -185,14 +163,8 @@ public class QuantumModel {
 	/*
 	 * TODO: 根据alpha, beta来查找旋转方向对照表
 	 * */
-	/*
-	 * TODO: 更新每个个体的旋转角度
-	 * RETURN: 返回当前个体在在下一次旋转时的旋转角度
-	 * */
-	public double calAngleForIndividual() {
-		double angle = 0;
-		return angle;
-	}
+	
+	
 	/*
 	 * TODO:初始化种群{包括实例化population中每一个个体对象，调用初始化函数} RETURN：修改population数组
 	 */
@@ -255,10 +227,10 @@ public class QuantumModel {
 			int k = 1, noisyK = 2;
 			for (int tempK = 5; tempK <= 5; ++tempK) {
 				for (int tempNoiseK = 5; tempNoiseK <= 5; tempNoiseK++) {
-					Setting setting = new Setting(tempK, tempNoiseK, 10,500, 30,Enum_Classifier.C45);
+					Setting setting = new Setting(10,1000,Enum_Classifier.C45);
 					InstancesSet instancesSet = new InstancesSet(dataSets[set], setting);
 					double sum = 0;
-					for (int i = 0; i <= 0; ++i) {
+					for (int i = 0; i <= 1; ++i) {
 						
 							instancesSet.initializeInstancesSet(i);
 							QuantumModel quantumModel = new QuantumModel(setting, instancesSet);

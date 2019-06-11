@@ -1,5 +1,6 @@
 package 量子混合采样多分类;
 
+import java.io.File;
 import java.io.FileWriter;
 
 public class Main {
@@ -8,40 +9,31 @@ public class Main {
 		String[] dataSets = { "glass1", "pima", "glass0", "yeast1", "vehicle1", "glass0123vs456", "ecoli1",
 				"newthyroid1", "newthyroid2", "ecoli2", "glass6", "yeast3", "ecoli3", "glass016v2", "yeast1v7",
 				"glass4", "glass5", "yeast2v8", "yeast4", "yeast6" };
-		FileWriter fw = new FileWriter("dataset/增加了Margin后的实验结果C4.5 .dat", true);
-		for (int set = 0; set < dataSets.length; ++set) {
-			System.out.println("当前运行数据集为："+dataSets[set]);
-			int maxK = 1, maxNoiseK=2;
-			double maxFitness = 0;
-			int k = 1, noisyK = 2;
-			for (int tempK = 2; tempK < 10; ++tempK) {
-				for (int tempNoiseK = 2; tempNoiseK < 10; tempNoiseK++) {
-					Setting setting = new Setting(tempK, tempNoiseK, 20, 100, 20, Enum_Classifier.C45);
-					InstancesSet instancesSet = new InstancesSet(dataSets[set], setting);
-					double sum = 0;
-					for (int i = 0; i < 5; ++i) {
-						try {
-							instancesSet.initializeInstancesSet(i);
-							QuantumModel quantumModel = new QuantumModel(setting, instancesSet);
-							quantumModel.run();
-							sum += quantumModel.gBestIndividual.fitness;
-						}catch(Exception e) {
-							System.out.println("参数不符合模型要求，运行失败");
-						}
-					}
-					
-					if(maxFitness < sum) {
-						maxFitness = sum;
-						maxK = tempK;
-						maxNoiseK = tempNoiseK;
-					}
+	
+		for (int set = 0; set <= 0; ++set) {
+			System.out.println("当前运行数据集为：" + dataSets[set]);
+			for (int cls = 0; cls < 4; ++cls) {
+				File file = new File("实验结果\\dev0基于边界的实验结果\\"+Enum_Classifier.values()[cls]+".dat");
+		        // 创建文件
+		        file.createNewFile();
+		        // creates a FileWriter Object
+				FileWriter fw = new FileWriter(file);
+				fw.write(dataSets[set]+": ");
+				Setting setting = new Setting(20, 500, Enum_Classifier.values()[cls]);
+				InstancesSet instancesSet = new InstancesSet(dataSets[set], setting);
+				double sum = 0;
+				for (int i = 0; i <  5; ++i) {
+					instancesSet.initializeInstancesSet(i);
+					QuantumModel quantumModel = new QuantumModel(setting, instancesSet);
+					quantumModel.run();
+					sum += quantumModel.gBestIndividual.fitness;
 				}
+				sum /= 5;
+				fw.write(""+sum+"\n");
+				fw.close();
 			}
-			fw.write(dataSets[set] + ":" + maxFitness / 5 + " K："+maxK+"NoiseK:"+maxNoiseK);
-			fw.write('\n');
-			System.out.println("最终的最优结果为：" + maxFitness / 5);
 		}
-		fw.close();
+
 	}
 
 }

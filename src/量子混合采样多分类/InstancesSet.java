@@ -65,9 +65,10 @@ public class InstancesSet implements Serializable{
 		*/
 		/*
 		initializeDistanceMatrix(rawInstances);
-		removeNoiseInstance();
+		
 		//将移除噪声后的数据集的样本加入到originInstances集合中
 		 */
+		removeNoiseInstance();
 		originInstances = new ArrayList<>();
 		for(int i = 0; i < rawInstances.size(); ++i) {
 			originInstances.add(rawInstances.get(i));
@@ -387,7 +388,7 @@ public class InstancesSet implements Serializable{
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		InstanceDao instanceDao = new InstanceDao();
-		Setting setting = new Setting(200, 5, 5, 1, 1, Enum_Classifier.C45);
+		Setting setting = new Setting( 5, 1,Enum_Classifier.C45);
 		InstancesSet instancesSet = new InstancesSet("", setting);
 		instancesSet.initializeInstancesSet(1);
 		return;
