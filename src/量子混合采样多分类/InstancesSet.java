@@ -56,7 +56,7 @@ public class InstancesSet implements Serializable{
 		validateInstances.clear();
 		for(int i = rawInstances.size()-1; i >=0; i--) {
 			Instance inst = rawInstances.get(i);
-			if(i%5 != 0) {continue;}
+			if(i%10 != 0) {continue;}
 			rawInstances.remove(i);
 			validateInstances.add(inst);
 		}

@@ -110,6 +110,21 @@ public class Individual  implements Serializable{
 		evaluation.evaluateModel(classifier, instancesSet.testInstances);
 		return evaluation.areaUnderROC(0);
 	}
+	
+	public double calAUC1(Enum_Classifier cls) throws Exception {
+		//利用handledInstances进行分类实验
+		Instances newInstances = new Instances(instancesSet.rawInstances);
+		newInstances.clear();
+		//将handledInstances全部加入到newInstances中
+		for(Instance inst: handledInstances) {
+			newInstances.add(inst);
+		}
+		Classifier classifier = chooseClassifier(cls);
+		classifier.buildClassifier(newInstances);
+		Evaluation evaluation = new Evaluation(newInstances);
+		evaluation.evaluateModel(classifier, instancesSet.validateInstances);
+		return evaluation.areaUnderROC(0);
+	}
 	/*
 	 * TODO:对个体进行混合采样
 	 * RETURN：返回一个经过处理后的样本集合
