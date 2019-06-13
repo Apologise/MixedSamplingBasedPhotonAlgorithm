@@ -7,9 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import org.omg.CORBA.TRANSACTION_MODE;
-
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.bayes.NaiveBayes;
@@ -18,43 +15,122 @@ import weka.classifiers.lazy.IBk;
 import weka.classifiers.trees.J48;
 import weka.core.Instance;
 import weka.core.Instances;
+import weka.filters.Filter;
+import weka.filters.unsupervised.attribute.Normalize;
 
 /*
  * Author: apolo
  * Time:   2019.5.22
- * INFO:   多分类框架，用于分类，最终返回一个特定的多分类指标（MAUC, MGmean）
+ * INFO:   多分类框架，用于数据的多分类（包含二分类），最终返回一个特定的多分类指标（MAUC, MGmean）
  * */
+
+
 public class ClassifyModel {
 	public List<Instance> m_train;
 	public Instances m_test;
-	public int[] flag;
-	//将m_train和m_test均按类别拆分
+	public int[] flag;	//预测类标数组
+	//将m_train按类别拆分
 	public List<List<Instance>> m_trainInstancesByClass;
 	public List<List<Double>> distanceMatrix;
 	public Enum_Classifier cls;
+	public Instances normalizeInstances;
 	
 	
 	/*
 	 * trian为已经经过混合采样后的数据集
 	 * test为验证集合
 	 * */
-	public ClassifyModel(List<Instance> train, Instances test, Enum_Classifier classfier) {
+	public ClassifyModel(List<Instance> train, Instances test, Enum_Classifier classfier) throws Exception {
 		m_train = train;
 		m_test = test;
 		flag = new int[m_test.size()]; 
-		splitTrainByClass();
 		cls = classfier;
+		normalizeInstances = new Instances(m_test);
+		normalizeInstances.clear();
+		for(Instance inst: m_train) {
+			normalizeInstances.add(inst);
+		}
+		normalizeInstances = normalizeInstances(normalizeInstances);
+		m_test = normalizeInstances(m_test);
+		splitTrainByClass();
+	}
+	
+	public Instances normalizeInstances(Instances instances) throws Exception {
+		Normalize normalizer = new Normalize();
+		normalizer.setInputFormat(instances);
+		instances = Filter.useFilter(instances, normalizer);
+		return instances;
+	}
+	/*
+	 * TODO: 计算多分类指标Marco-F1
+	 * RETURN: 返回Marco-F1
+	 * */
+	public double calMarcoF1() {
+		double marcoF1 = 0;
+		double marcoP = calMarcoP();
+		double marcoR = calMarcoR();
+		marcoF1 = (2*marcoP*marcoR)/(marcoP+marcoR);
+		return marcoF1;
+	}
+	/*
+	 * TODO: 计算多分类指标Marco-R
+	 * RETURN: 返回Marco-R值
+	 * */
+	public double calMarcoP() {
+		double marcoP = 0.0d;
+		int numClass = normalizeInstances.get(0).numClasses();
+		List<Double> pList = new ArrayList<>();
+		for(int i = 0; i < numClass; ++i) {
+			double p = 0;
+			int tp = 0, fp = 0;
+			for(int j = 0; j < m_test.size(); ++j) {
+				int classLabel = (int)m_test.get(j).classValue();
+				if(classLabel == i && flag[j] == i) {
+					tp++;
+				}
+				if(classLabel != i && flag[j] == i) {
+					fp++;
+				}
+			}
+			p = tp*1.0/(tp+fp);
+			pList.add(p);
+		}
+		for(int i = 0; i < pList.size(); ++i) {
+			marcoP += pList.get(i);
+		}
+		marcoP /= pList.size();
+		return marcoP;
 	}
 	
 	/*
-	 * TODO: 计算多分类指标MAUC
-	 * RETURN: 返回MAUC值
+	 * TODO: 计算多分类指标Marco-R
+	 * RETURN: 返回Marco-R值
 	 * */
-	public double calMAUC() {
-		double mAuc = 0.0d;
-		return mAuc;
+	public double calMarcoR() {
+		double marcoR = 0.0d;
+		int numClass = normalizeInstances.get(0).numClasses();
+		List<Double> rList = new ArrayList<>();
+		for(int i = 0; i < numClass; ++i) {
+			double r = 0;
+			int tp = 0, fn = 0;
+			for(int j = 0; j < m_test.size(); ++j) {
+				int classLabel = (int)m_test.get(j).classValue();
+				if(classLabel == i && flag[j] == i) {
+					tp++;
+				}
+				if(classLabel == i && flag[j] != i) {
+					fn++;
+				}
+			}
+			r = tp*1.0/(tp+fn);
+			rList.add(r);
+		}
+		for(int i = 0; i < rList.size(); ++i) {
+			marcoR += rList.get(i);
+		}
+		marcoR /= rList.size();
+		return marcoR;
 	}
-	
 	
 	/*
 	 * TODO: 计算多分类指标MGMean
@@ -63,16 +139,16 @@ public class ClassifyModel {
 	public double calMultiGMean() {
 		double mGmean = 1;
 		List<Double> mGeanList = new ArrayList<>();
-		int numClass = m_train.get(0).numClasses();
+		int numClass = normalizeInstances.get(0).numClasses();
 		for(int i = 0; i < numClass; ++i) {
 			double recall = 0;
 			int tp = 0, fn = 0;
 			for(int j = 0; j < m_test.size(); ++j) {
 				int classLabel = (int)m_test.get(j).classValue();
-				if(classLabel == i && flag[j] == 1) {
+				if(classLabel == i && flag[j] == i) {
 					tp++;
 				}
-				if(classLabel == i && flag[j] != 1) {
+				if(classLabel == i && flag[j] != i) {
 					fn++;
 				}
 			}
@@ -88,15 +164,16 @@ public class ClassifyModel {
 	
 	/*
 	 * TODO: 将m_trainMajorityInstances按照类别进行拆分
+	 * RETURN: 返回成员变量m_trainInstancesByClass
 	 * */
 	public void splitTrainByClass() {
-			int numOfClass = m_train.get(0).numClasses();
+			int numOfClass = normalizeInstances.get(0).numClasses();
 			m_trainInstancesByClass = new ArrayList<>();
 			for(int i = 0; i < numOfClass; ++i) {
 				List<Instance> temp = new ArrayList<>();
 				m_trainInstancesByClass.add(temp);
 			}
-			for(Instance inst: m_train) {
+			for(Instance inst: normalizeInstances) {
 				int classLabel = (int)inst.classValue();
 				//获得类标为classLabel的List，并将其加入其中
 				m_trainInstancesByClass.get(classLabel).add(inst);
@@ -105,22 +182,30 @@ public class ClassifyModel {
 	
 	/*
 	 * TODO: 对测试样本进行评估
+	 * RETURN: 返回每一个样本的预测类标数组flag
 	 * */
-	public void evaluateTestInstance(Instances testInstances) throws Exception {
+	public void evaluateTestInstance() throws Exception {
 		Evaluation evaluation = new Evaluation(m_test);
-		for(int i = 0; i < testInstances.size(); ++i) {
-			Instance inst = testInstances.get(i);
+		//先初始化flag数组，全部置为-1
+		for(int i = 0; i < flag.length; ++i) {
+			flag[i] = -1;
+		}
+		for(int i = 0; i < m_test.size(); ++i) {
+			Instance inst = m_test.get(i);
 			//1. 先找到该测试样本所对应的分类器
 			List<Integer> classLabel = getLabelByDistance(inst);
-			Classifier cls = builderClassifierByBinaryClass(classLabel.get(0), classLabel.get(1));
+			for(int j = 0; j <= classLabel.size()-2; ++j) {
+				Classifier cls = builderClassifierByBinaryClass(classLabel.get(j), classLabel.get(j+1));
 			//2. 使用该分类器进行预测
-			int predictLabel = (int)evaluation.evaluateModelOnce(cls, inst);
-			System.out.println(predictLabel);
-			if(predictLabel == (int)inst.classValue()) {
-				flag[i] = 1;
-			}else {
-				flag[i] = 0;
+				int predictLabel = (int)evaluation.evaluateModelOnce(cls, inst);
+				if(predictLabel == classLabel.get(j)) {
+					flag[i] = predictLabel;
+					break;
+				}else {
+					continue;
+				}
 			}
+			
 		}
 	}
 	/*
@@ -190,7 +275,6 @@ public class ClassifyModel {
 		List<Entry<Double, Integer>> distanceEntries = new ArrayList<>(distanceForEveryClass.entrySet());
 		//2.1 对distanceEntries进行排序
 		Collections.sort(distanceEntries, new Comparator<Entry<Double, Integer>>() {
-
 			@Override
 			public int compare(Entry<Double, Integer> o1, Entry<Double, Integer> o2) {
 				// TODO Auto-generated method stub
@@ -223,8 +307,9 @@ public class ClassifyModel {
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		InstanceDao dao = new InstanceDao();
-		Instances rawInstances = dao.loadDataFromFile("dataset/wine.arff");
-		Instances validationInstances = new Instances(rawInstances);
+		Instances rawInstances = dao.loadDataFromFile("多分类数据集/shuttle-5-fold/shuttle-5-1tra.arff");
+		Instances validationInstances = dao.loadDataFromFile("多分类数据集/shuttle-5-fold/shuttle-5-1tst.arff");
+		/*
 		validationInstances.clear();
 		for(int i = rawInstances.size() -1; i >=0; i--) {
 			if(i % 5 != 0) continue;
@@ -232,14 +317,16 @@ public class ClassifyModel {
 			rawInstances.remove(i);
 			validationInstances.add(inst);
 		}
+		*/
 		List<Instance> trainInstances = new ArrayList<>();
 		for(int i = 0; i < rawInstances.size(); ++i) {
 			trainInstances.add(rawInstances.get(i));
 		}
+		
 		ClassifyModel clsModel = new ClassifyModel(trainInstances, 
 				validationInstances, Enum_Classifier.C45);
-		clsModel.evaluateTestInstance(validationInstances);
-		double result = clsModel.calMGMean();
+		clsModel.evaluateTestInstance();
+		double result = clsModel.calMarcoF1();
 		System.out.println(result);
 	}
 

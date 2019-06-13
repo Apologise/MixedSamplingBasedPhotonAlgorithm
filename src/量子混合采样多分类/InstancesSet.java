@@ -34,6 +34,7 @@ public class InstancesSet implements Serializable{
 	public Set<Integer> minorityClassLabel;			//少数类的类标
 	public Instances validateInstances;				//测试集
 	public List<Double> instanceOfMargin;			//样本的安全间距
+	public Instances testInstances;
 
 	public int fold;
 	
@@ -51,8 +52,15 @@ public class InstancesSet implements Serializable{
 		String[] trainSet = Dataset.chooseDataset(fileName, 0);
 		String[] testSet = Dataset.chooseDataset(fileName, 1);
 		rawInstances = instanceDao.loadDataFromFile("dataset/"+trainSet[curFold]);
-	
-		validateInstances = instanceDao.loadDataFromFile("dataset/"+testSet[curFold]);
+		validateInstances = new Instances(rawInstances);
+		validateInstances.clear();
+		for(int i = rawInstances.size()-1; i >=0; i--) {
+			Instance inst = rawInstances.get(i);
+			if(i%5 != 0) {continue;}
+			rawInstances.remove(i);
+			validateInstances.add(inst);
+		}
+		testInstances = instanceDao.loadDataFromFile("dataset/"+testSet[curFold]);
 		//初始化距离矩阵
 		distanceMatrix = new ArrayList<List<Double>>();
 		initializeDistanceMatrix(rawInstances);

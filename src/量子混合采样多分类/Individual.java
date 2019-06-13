@@ -93,6 +93,24 @@ public class Individual  implements Serializable{
 	}
 	
 	/*
+	 * TODO: 计算最终的分类值
+	 * 
+	 * */
+	public double calAUC(Enum_Classifier cls) throws Exception {
+		//利用handledInstances进行分类实验
+		Instances newInstances = new Instances(instancesSet.rawInstances);
+		newInstances.clear();
+		//将handledInstances全部加入到newInstances中
+		for(Instance inst: handledInstances) {
+			newInstances.add(inst);
+		}
+		Classifier classifier = chooseClassifier(cls);
+		classifier.buildClassifier(newInstances);
+		Evaluation evaluation = new Evaluation(newInstances);
+		evaluation.evaluateModel(classifier, instancesSet.testInstances);
+		return evaluation.areaUnderROC(0);
+	}
+	/*
 	 * TODO:对个体进行混合采样
 	 * RETURN：返回一个经过处理后的样本集合
 	 * */
@@ -310,6 +328,7 @@ public class Individual  implements Serializable{
 	 * */
 	public int[] calInstanceToGenerate(List<Instance> minority, int average) {
 		int classLabel = (int)minority.get(0).classValue();
+
 		int minoritySize = minority.size();
 		int[] n = new int[instancesSet.originInstances.size()];
 		int generatesize = average - minoritySize;
@@ -331,7 +350,7 @@ public class Individual  implements Serializable{
 				}
 			}
 		}
-
+		
 		int reminder = generatesize % instancesToOverSampling.size();
 		// println(minoritySamples.size());
 		for (int i = 0; i < reminder;) {
@@ -344,7 +363,7 @@ public class Individual  implements Serializable{
 			} else {
 			}
 		}
-
+	
 		int count = 0;
 		for (int i = 0; i < minoritySize; ++i) {
 			count += n[i];
