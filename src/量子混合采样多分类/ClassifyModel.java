@@ -194,17 +194,10 @@ public class ClassifyModel {
 			Instance inst = m_test.get(i);
 			//1. 先找到该测试样本所对应的分类器
 			List<Integer> classLabel = getLabelByDistance(inst);
-			for(int j = 0; j <= classLabel.size()-2; ++j) {
-				Classifier cls = builderClassifierByBinaryClass(classLabel.get(j), classLabel.get(j+1));
+				Classifier cls = builderClassifierByBinaryClass(classLabel.get(0), classLabel.get(1));
 			//2. 使用该分类器进行预测
 				int predictLabel = (int)evaluation.evaluateModelOnce(cls, inst);
-				if(predictLabel == classLabel.get(j)) {
-					flag[i] = predictLabel;
-					break;
-				}else {
-					continue;
-				}
-			}
+				flag[i] = predictLabel;
 			
 		}
 	}
@@ -309,15 +302,6 @@ public class ClassifyModel {
 		InstanceDao dao = new InstanceDao();
 		Instances rawInstances = dao.loadDataFromFile("多分类数据集/shuttle-5-fold/shuttle-5-1tra.arff");
 		Instances validationInstances = dao.loadDataFromFile("多分类数据集/shuttle-5-fold/shuttle-5-1tst.arff");
-		/*
-		validationInstances.clear();
-		for(int i = rawInstances.size() -1; i >=0; i--) {
-			if(i % 5 != 0) continue;
-			Instance inst = rawInstances.get(i);
-			rawInstances.remove(i);
-			validationInstances.add(inst);
-		}
-		*/
 		List<Instance> trainInstances = new ArrayList<>();
 		for(int i = 0; i < rawInstances.size(); ++i) {
 			trainInstances.add(rawInstances.get(i));
@@ -326,7 +310,7 @@ public class ClassifyModel {
 		ClassifyModel clsModel = new ClassifyModel(trainInstances, 
 				validationInstances, Enum_Classifier.C45);
 		clsModel.evaluateTestInstance();
-		double result = clsModel.calMarcoF1();
+		double result = clsModel.calMultiGMean();
 		System.out.println(result);
 	}
 
