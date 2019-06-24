@@ -184,33 +184,69 @@ public class Individual  implements Serializable{
 		//计算少数类样本的个数和多数类样本的个数
 		List<Instance> output = new ArrayList<>();
 		int  numClass = instancesSet.rawInstances.numClasses();
-		int average = handledInstances.size()/numClass;
+	
 		//1. 首先将所有样本按照类标进行拆分，此时存储所有样本的对象为handledInstances
 		instancesByClass = splitByClass();
+		
+		//求出类别中数量最多的类别的样本
+		int max = 0;
+		for(int i = 0; i < numClass; ++i) {
+			if(max < instancesByClass.get(i).size()) {
+				max = instancesByClass.get(i).size();
+			}
+		}
+//		int average = handledInstances.size()/numClass;
 		//2. 对每一个少数类进行过采样
 		for(int classValue = 0; classValue < numClass; classValue++){
 			List<Instance> instances = instancesByClass.get(classValue);
+			if(instances == null) {
+				System.out.print("");
+			}
 			//2. 如果少数类样本多于平均的样本数量，那么就不需要进行过采样
-			if(instances.size() > average) {
+			if(instances.size() >= max) {
 				continue;
 			}
 			//2.2 根据个体的flag筛选结果计算少选后的少数类进行欠采样的个数（不需要欠采样的样本值为0，反之不为0）
-			int[] n = calInstanceToGenerate(instances, average);
+			int[] n = calInstanceToGenerate(instances, max);
+			/*
 			//2.3 根据当前经过欠采样后的样本进行计算类别间距
 			Map<Integer, Double> instancesOfMargin = calMargin();
 			//2.4 针对instanceOfMargin进行过采样
+			
 			for(Entry<Integer, Double> entry: instancesOfMargin.entrySet()) {
-				for(int i = 0; i < n[entry.getKey()]; ++i) {
+				Instance instTemp = handledInstances.get(entry.getKey());
+				//根据inst来获取在originInstances中的下标
+				int index = instancesSet.originInstances.indexOf(instTemp);
+				for(int i = 0; i < n[index]; ++i) {
 					Instance inst = generateSample(entry, classValue);
 					output.add(inst);
 				}
 			}
-			
+			*/
+			Instances majority = new Instances(instancesSet.rawInstances);
+			majority.clear();
+			for(int i = 0; i < handledInstances.size(); ++i) {
+				if(handledInstances.get(i).classValue() != classValue) {
+					majority.add(handledInstances.get(i));
+				}
+			}
+			Instances inputData = new Instances(instancesSet.rawInstances);
+			inputData.clear();
+			for(Instance inst: handledInstances) {
+				inputData.add(inst);
+			}
+			GenerateSample generateSample = new GenerateSample(setting);
+			for(int i = 0; i < n.length; ++i) {
+				Instance inst = instancesSet.originInstances.get(i);
+				if(n[i] <= 0) {continue;}
+				generateSample.generateSample(inst,inputData,majority, output , n[i]);
+			}
 		}
 		//将生成的样本加入到handleInstances中
 		for(Instance inst: output) {
 			handledInstances.add(inst);
 		}
+		instancesByClass = splitByClass();
 	}
 	
 	/*
@@ -342,8 +378,8 @@ public class Individual  implements Serializable{
 	 * RETURN： 每个样本的近邻数组
 	 * */
 	public int[] calInstanceToGenerate(List<Instance> minority, int average) {
+		
 		int classLabel = (int)minority.get(0).classValue();
-
 		int minoritySize = minority.size();
 		int[] n = new int[instancesSet.originInstances.size()];
 		int generatesize = average - minoritySize;

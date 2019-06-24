@@ -3,7 +3,7 @@ package 量子混合采样多分类;
 import java.io.Serializable;
 
 public class Setting implements Serializable{
-	public int K;
+	public int K = 5;
 	public int noisyK = 5;
 	public double underSampleRatio = 0.3;
 	public int popSize;

@@ -52,6 +52,9 @@ public class InstancesSet implements Serializable{
 		String[] trainSet = Dataset.chooseDataset(fileName, 0);
 		String[] testSet = Dataset.chooseDataset(fileName, 1);
 		rawInstances = instanceDao.loadDataFromFile("dataset/"+trainSet[curFold]);
+		if(rawInstances == null) {
+			System.out.println();
+		}
 		validateInstances = new Instances(rawInstances);
 		validateInstances.clear();
 		for(int i = rawInstances.size()-1; i >=0; i--) {
