@@ -245,6 +245,8 @@ public class Individual  implements Serializable{
 		//将生成的样本加入到handleInstances中
 		for(Instance inst: output) {
 			handledInstances.add(inst);
+			System.out.println(inst.toString());
+			
 		}
 		instancesByClass = splitByClass();
 	}
@@ -491,7 +493,7 @@ public class Individual  implements Serializable{
 		// TODO Auto-generated method stub
 		Enum_Classifier classifier = Enum_Classifier.C45;
 		Setting setting  = new Setting( 4, 10,classifier);
-		InstancesSet instancesSet = new InstancesSet("test", setting);
+		InstancesSet instancesSet = new InstancesSet("pima", setting);
 		instancesSet.initializeInstancesSet(0);
 		Individual individual = new Individual(setting, instancesSet);
 		individual.initializeIndividual();
