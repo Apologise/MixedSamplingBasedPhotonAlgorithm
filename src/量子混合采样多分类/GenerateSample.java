@@ -22,15 +22,15 @@ public class GenerateSample {
 	public GenerateSample(Setting setting) {
 		this.setting = setting;
 	}
-	public  void generateSample(Instance inst,Instances inputData,Instances majority, List<Instance> output ,int N) {
+	public  void generateSample(Instance inst,Instances inputData,Instances majority, List<List<Instance>> output ,int N) {
 		List<Integer> knn = calNeighborsWithDensity(inst, inputData, majority);
-		
+		for(int i = 0; i < output.size(); ++i) {
 			int IR = N;
 			while(IR != 0) {
 				double[] values = new double[inputData.numAttributes()];
 				for(int j = 0; j < inputData.numAttributes()-1; ++j) {
+					
 					double gap = Math.random();
-					int indexK = (int)(gap*setting.K);
 					/*
 					if(gap<0.2) {
 						gap = 0.2;
@@ -38,12 +38,13 @@ public class GenerateSample {
 						gap = 0.8;
 					}
 					*/
-					double diff = inputData.get(knn.get(indexK)).value(j)-inst.value(j);
+					double diff = inputData.get(knn.get(i)).value(j)-inst.value(j);
 					values[j] = inst.value(j) + gap*diff;
 				}
 				values[inputData.numAttributes()-1] = inputData.get(0).classValue();
-				output.add(inputData.get(0).copy(values));
+				output.get(i).add(inputData.get(0).copy(values));
 				IR--;
+			}
 		}
 	}
 	
