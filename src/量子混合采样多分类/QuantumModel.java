@@ -32,6 +32,7 @@ public class QuantumModel {
 		// 1. 初始化种群
 		initializePopulation();
 		int T = iter;
+		FileWriter fw = new FileWriter("实验结果/dev0基于边界的实验结果(最大值)/个体观测记录.dat",false);
 		do {
 			// System.out.println("第"+(iter-T+1)+"次迭代");
 			// 2. 对所有的个体进行观测
@@ -61,6 +62,16 @@ public class QuantumModel {
 				double angle[] = updateAngle(population[i], gBestIndividual);
 				//2.根据旋转角对量子位进行旋转
 				population[i].phaseRotate(angle);
+			}
+			//1.打印个体3的优化记录
+			fw.write("\n个体适应度："+population[2].fitness+""
+					+ "\n");
+			for(int i = 0; i < population[2].flag.length; ++i) {
+				fw.write(""+population[2].flag[i]);
+			}
+			fw.write("\n最优个体适应度"+gBestIndividual.fitness+"\n");
+			for(int i = 0; i < gBestIndividual.flag.length; ++i) {
+				fw.write(""+gBestIndividual.flag[i]);
 			}
 			System.out.println("当前迭代次数为"+(iter-T));
 			T--;
@@ -231,7 +242,6 @@ public class QuantumModel {
 					InstancesSet instancesSet = new InstancesSet(dataSets[set], setting);
 					double sum = 0;
 					for (int i = 0; i <= 1; ++i) {
-						
 							instancesSet.initializeInstancesSet(i);
 							QuantumModel quantumModel = new QuantumModel(setting, instancesSet);
 							quantumModel.run();

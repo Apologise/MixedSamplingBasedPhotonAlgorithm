@@ -184,6 +184,7 @@ public class Individual implements Serializable {
 		for (Instance inst : instancesSet.originInstances) {
 			handledInstances.add(inst);
 		}
+		instancesByClass = splitByClass();
 		underSampling();
 		overSampling();
 	}
@@ -200,7 +201,6 @@ public class Individual implements Serializable {
 			}
 		}
 		Collections.sort(indexOfRemovedInstances, new Comparator<Integer>() {
-
 			@Override
 			public int compare(Integer o1, Integer o2) {
 				// TODO Auto-generated method stub
@@ -217,9 +217,14 @@ public class Individual implements Serializable {
 		for (int i = 0; i < indexOfRemovedInstances.size(); ++i) {
 			int index = indexOfRemovedInstances.get(i);
 			Instance inst = instancesSet.originInstances.get(index);
-			handledInstances.remove(inst);
+			//判断该类是否为少数类
+			if(!isMinorityClass(inst)) {
+				//如果不为少数类就进行移除
+				handledInstances.remove(inst);
+			}
 		}
 	}
+
 
 	/*
 	 * TODO: 对样本进行过采样 RETURN: 将生成的样本加入到handledInstances中
@@ -238,7 +243,10 @@ public class Individual implements Serializable {
 
 		// 1. 首先将所有样本按照类标进行拆分，此时存储所有样本的对象为handledInstances
 		instancesByClass = splitByClass();
-
+		for(int i = 0; i < handledInstances.size(); ++i) {
+			
+		}
+		
 		// 求出类别中数量最多的类别的样本
 		int max = 0;
 		for (int i = 0; i < numClass; ++i) {
@@ -250,12 +258,15 @@ public class Individual implements Serializable {
 		// 2. 对每一个少数类进行过采样
 		for (int classValue = 0; classValue < numClass; classValue++) {
 			List<Instance> instances = instancesByClass.get(classValue);
-			if (instances == null) {
-				System.out.print("");
-			}
 			// 2. 如果少数类样本多于平均的样本数量，那么就不需要进行过采样
 			if (instances.size() >= max) {
 				continue;
+			}
+			//如果当前少数类样本数量小于设定的K值，那么将K值设置为少数类样本数量-1
+			//并且在进行采样后将K值复原
+			int tempK = setting.K;
+			if(instancesByClass.get(classValue).size() <= setting.K) {
+				setting.K = instancesByClass.get(classValue).size()-1;
 			}
 			// 2.2 根据个体的flag筛选结果计算少选后的少数类进行欠采样的个数（不需要欠采样的样本值为0，反之不为0）
 			int[] n = calInstanceToGenerate(instances, max);
@@ -280,6 +291,8 @@ public class Individual implements Serializable {
 			Instances inputData = new Instances(instancesSet.rawInstances);
 			inputData.clear();
 			for (Instance inst : handledInstances) {
+				int  label = (int)inst.classValue();
+				if(classValue != label) {continue;}
 				inputData.add(inst);
 			}
 			GenerateSample generateSample = new GenerateSample(setting);
@@ -290,6 +303,7 @@ public class Individual implements Serializable {
 				}
 				generateSample.generateSample(inst, inputData, majority, output, n[i]);
 			}
+			setting.K = tempK;
 
 		}
 		// 将生成的样本加入到handleInstances中
@@ -302,7 +316,6 @@ public class Individual implements Serializable {
 				allHandledInstances.get(i).add(inst);
 			}
 		}
-
 	}
 
 	/*
@@ -537,6 +550,25 @@ public class Individual implements Serializable {
 		return desObject;
 	}
 
+	
+	/*
+	 * TODO: 判断一个样本是否属于少数类
+	 * RETURN： 如果该样本为少数类，那么就返回true, 否则返回false
+	 * */
+	
+	public boolean isMinorityClass(Instance inst) {
+		//求得整个数据集的平均样本个数
+		int average = 0;
+		for(int i = 0; i < instancesByClass.size(); ++i) {
+			average += instancesByClass.get(i).size();
+		}
+		average /= inst.numClasses();
+		int classLabel = (int)inst.classValue();
+		if(instancesByClass.get(classLabel).size() < average) {
+			return true;
+		}
+		return false;
+	}
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		Enum_Classifier classifier = Enum_Classifier.C45;

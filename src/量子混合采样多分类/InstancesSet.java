@@ -11,12 +11,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.function.IntPredicate;
 
+import weka.clusterers.SimpleKMeans;
 import weka.core.Instance;
 import weka.core.Instances;
+import weka.core.Utils;
 import weka.core.expressionlanguage.common.IfElseMacro;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Normalize;
+import weka.filters.unsupervised.attribute.Remove;
 
 /*
  * InstancesSet类实例用于保存各种类型的样本集合
@@ -57,16 +61,20 @@ public class InstancesSet implements Serializable{
 		}
 		validateInstances = new Instances(rawInstances);
 		validateInstances.clear();
+		/*
 		for(int i = rawInstances.size()-1; i >=0; i--) {
 			Instance inst = rawInstances.get(i);
 			if(i%10 != 0) {continue;}
 			rawInstances.remove(i);
 			validateInstances.add(inst);
 		}
+		*/
+		selectValidation(rawInstances, validateInstances);
 		testInstances = instanceDao.loadDataFromFile("dataset/"+testSet[curFold]);
 		//初始化距离矩阵
 		distanceMatrix = new ArrayList<List<Double>>();
 		initializeDistanceMatrix(rawInstances);
+		/*
 		//移除重复样本
 		removeDuplicateInstance();
 		initializeDistanceMatrix(rawInstances);
@@ -74,9 +82,10 @@ public class InstancesSet implements Serializable{
 		//将数据集进行归一化
 		rawInstances = normalizeInstances(rawInstances);
 		*/
-		
+		/*
 		initializeDistanceMatrix(rawInstances);
 		removeNoiseInstance();
+		*/
 		//将移除噪声后的数据集的样本加入到originInstances集合中
 		 
 		originInstances = new ArrayList<>();
@@ -394,7 +403,70 @@ public class InstancesSet implements Serializable{
 		return indexOfInstance;
 	}
 	
-	
+	/*
+	 * TODO: 利用Kmeans算法提取出验证集
+	 * RETURN： 返回一个包含有验证集和测试集
+	 * */
+	public void selectValidation(Instances _rawInstances, Instances _valInstances) throws Exception {
+		//计算验证集的数量
+		int num = (int) (_rawInstances.size()*0.1);
+		//从每个类中取部分验证集，按照一定规律分配
+		List<Instances> classOfInstance = new ArrayList<>();
+		for(int i = 0; i < _rawInstances.numClasses(); ++i) {
+			Instances  temp= new Instances(_rawInstances);
+			temp.clear();
+			classOfInstance.add(temp);
+		}
+		//将整个数据进行按类拆分
+		for(int i = 0; i < _rawInstances.size(); ++i) {
+			Instance inst = _rawInstances.get(i);
+			int classValue = (int) inst.classValue();
+			classOfInstance.get(classValue).add(inst);
+		}
+		//对每个类进行样本中心个数分配
+		int[] centriodsNum = new int[classOfInstance.size()];
+		for(int i = 0; i < classOfInstance.size(); ++i) {
+			int centriods = -1;
+			int cenNum = classOfInstance.get(i).size();
+			if(cenNum == 0) {
+				System.out.println("该类没有样本数，程序退出");
+				throw new Exception();
+			}
+			if(cenNum > 20) {
+				centriods = (int)(cenNum*0.5);
+			}else {
+				centriods = (int)(cenNum*0.5);
+			}
+			//对多数类进行聚类
+			SimpleKMeans kMeans = new SimpleKMeans();
+			//设置聚类个数为少数类的样本数
+			Remove remove = new Remove();
+			String[] options = Utils.splitOptions("-R "+classOfInstance.get(i).numAttributes());
+			remove.setOptions(options);
+			remove.setInputFormat(classOfInstance.get(i));
+			 Instances clusterdata = Filter.useFilter(classOfInstance.get(i), remove);
+			 
+			kMeans.setNumClusters(centriods);
+			kMeans.buildClusterer(clusterdata);
+			Instances centers = kMeans.getClusterCentroids();
+			centers.insertAttributeAt(classOfInstance.get(i).attribute(classOfInstance.get(i).numAttributes()-1),centers.numAttributes());
+			centers.setClassIndex(centers.numAttributes()-1);
+			//将产生的中心点作为多数类
+			Instances systhetic = new Instances(_rawInstances);
+			systhetic.clear();
+			//将少数类和中心点加入到systhetic中
+			for(Instance inst: centers) {
+				inst.setClassValue(classOfInstance.get(i).get(0).classValue());
+				systhetic.add(inst);
+			}
+			_valInstances.addAll(systhetic);
+		}
+		//将centerInstances从中删除
+		/*
+		for(Instance inst: _valInstances) {
+			_rawInstances.remove(inst);
+		}*/
+	}
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		InstanceDao instanceDao = new InstanceDao();

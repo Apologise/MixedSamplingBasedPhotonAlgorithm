@@ -10,11 +10,11 @@ public class Main {
 				"newthyroid1", "newthyroid2", "ecoli2", "glass6", "yeast3", "ecoli3", "glass016v2", "yeast1v7",
 				"glass4", "glass5", "yeast2v8", "yeast4", "yeast6" };
 	
-		for (int set = 0; set <=5; ++set) {
+		for (int set = 0; set <= 5; ++set) {
 			System.out.println("当前运行数据集为：" + dataSets[set]);
-			for (int cls = 1; cls < 4; ++cls) {
+			for (int cls = 0; cls <= 3; ++cls) {
 				
-				File file = new File("实验结果\\dev0基于边界的实验结果(最大值)\\"+Enum_Classifier.values()[cls]+"K邻居集成集成.dat");
+				File file = new File("实验结果\\dev0基于边界的实验结果(最大值)\\"+Enum_Classifier.values()[cls]+"K邻居集成集成（过采样+KMeans+修复BUG版+0.5+调试Bug版+少数类移除BUG）.dat");
 		        // 创建文件
 		        file.createNewFile();
 		        // creates a FileWriter Object
@@ -24,7 +24,7 @@ public class Main {
 				Setting setting = new Setting(10, 500, Enum_Classifier.values()[cls]);
 				InstancesSet instancesSet = new InstancesSet(dataSets[set], setting);
 				double sum = 0;
-				for (int i = 0; i <  5; ++i) {
+				for (int i = 0; i <=  4; ++i) {
 					instancesSet.initializeInstancesSet(i);
 					QuantumModel quantumModel = new QuantumModel(setting, instancesSet);
 					quantumModel.run();
@@ -41,7 +41,5 @@ public class Main {
 				}
 			}
 		}
-
 	}
-
 }

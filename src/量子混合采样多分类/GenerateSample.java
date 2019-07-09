@@ -38,8 +38,14 @@ public class GenerateSample {
 						gap = 0.8;
 					}
 					*/
-					double diff = inputData.get(knn.get(i)).value(j)-inst.value(j);
-					values[j] = inst.value(j) + gap*diff;
+					try {
+						double diff = inputData.get(knn.get(i)).value(j)-inst.value(j);
+						values[j] = inst.value(j) + gap*diff;
+					}catch (Exception e) {
+						// TODO: handle exception
+						System.out.println();
+					}
+					
 				}
 				values[inputData.numAttributes()-1] = inputData.get(0).classValue();
 				output.get(i).add(inputData.get(0).copy(values));
