@@ -288,12 +288,12 @@ public class Individual implements Serializable {
 					majority.add(handledInstances.get(i));
 				}
 			}
-			Instances inputData = new Instances(instancesSet.rawInstances);
-			inputData.clear();
+			Instances minority = new Instances(instancesSet.rawInstances);
+			minority.clear();
 			for (Instance inst : handledInstances) {
 				int  label = (int)inst.classValue();
 				if(classValue != label) {continue;}
-				inputData.add(inst);
+				minority.add(inst);
 			}
 			GenerateSample generateSample = new GenerateSample(setting);
 			for (int i = 0; i < n.length; ++i) {
@@ -301,7 +301,7 @@ public class Individual implements Serializable {
 				if (n[i] <= 0) {
 					continue;
 				}
-				generateSample.generateSample(inst, inputData, majority, output, n[i]);
+				generateSample.generateSample(inst, minority, majority, output, n[i]);
 			}
 			setting.K = tempK;
 
@@ -463,11 +463,15 @@ public class Individual implements Serializable {
 			if (flag[i] == 1) {
 				Instance inst = instancesSet.originInstances.get(i);
 				if ((int) inst.classValue() == classLabel) {
-					n[i] = generatesize / instancesToOverSampling.size();
+					if(instancesToOverSampling.size()!=0) {
+						n[i] = generatesize / instancesToOverSampling.size();
+					}else {
+						n[i] = 0;
+					}
 				}
 			}
 		}
-
+		if(instancesToOverSampling.size() == 0) {return n;}
 		int reminder = generatesize % instancesToOverSampling.size();
 		// println(minoritySamples.size());
 		for (int i = 0; i < reminder;) {
@@ -564,11 +568,12 @@ public class Individual implements Serializable {
 		}
 		average /= inst.numClasses();
 		int classLabel = (int)inst.classValue();
-		if(instancesByClass.get(classLabel).size() < average) {
+		if(instancesByClass.get(classLabel).size() < average*0.75) {
 			return true;
 		}
 		return false;
 	}
+	
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		Enum_Classifier classifier = Enum_Classifier.C45;

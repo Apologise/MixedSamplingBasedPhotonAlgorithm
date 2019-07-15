@@ -32,8 +32,10 @@ public class QuantumModel {
 		// 1. 初始化种群
 		initializePopulation();
 		int T = iter;
-		FileWriter fw = new FileWriter("实验结果/dev0基于边界的实验结果(最大值)/个体观测记录.dat",false);
+		System.out.println("迭代次数为："+T);
+//		FileWriter fw = new FileWriter("实验结果/dev0基于边界的实验结果(最大值)/个体观测记录6.dat",false);
 		do {
+	//		fw.write("\n迭代次数"+(iter-T+1));
 			// System.out.println("第"+(iter-T+1)+"次迭代");
 			// 2. 对所有的个体进行观测
 			for (int i = 0; i < population.length; ++i) {
@@ -45,7 +47,7 @@ public class QuantumModel {
 			for (int i = 0; i < population.length; ++i) {
 				population[i].mixedSampling();
 				population[i].calFitness(setting.cls);
-				System.out.println(population[i].fitness);
+//				System.out.println(population[i].fitness);
 			}
 			// 4.根据适应度保留最佳个体
 			if (T == iter) {
@@ -64,22 +66,28 @@ public class QuantumModel {
 				population[i].phaseRotate(angle);
 			}
 			//1.打印个体3的优化记录
+			/*
 			fw.write("\n个体适应度："+population[2].fitness+""
 					+ "\n");
 			for(int i = 0; i < population[2].flag.length; ++i) {
 				fw.write(""+population[2].flag[i]);
 			}
+			fw.write("\n"+population[2].flag.length);
 			fw.write("\n最优个体适应度"+gBestIndividual.fitness+"\n");
 			for(int i = 0; i < gBestIndividual.flag.length; ++i) {
 				fw.write(""+gBestIndividual.flag[i]);
 			}
-			System.out.println("当前迭代次数为"+(iter-T));
+			fw.write("\n"+gBestIndividual.flag.length);
+//			System.out.println("当前迭代次数为"+(iter-T));
+ * */
+ 
 			T--;
 		} while (T != 0);
-		System.out.println("量子模型->End...");
-		System.out.println("输出最优个体");
-		System.out.println(gBestIndividual.fitness);
-		System.out.println("算法运行结束");
+//		fw.close();
+//		System.out.println("量子模型->End...");
+//		System.out.println("输出最优个体");
+//		System.out.println(gBestIndividual.fitness);
+//		System.out.println("算法运行结束");
 	}
 	
 	/*
@@ -256,7 +264,7 @@ public class QuantumModel {
 			}
 			fw.write(dataSets[set] + ":" + maxFitness / 5 + " K："+maxK+"NoiseK:"+maxNoiseK);
 			fw.write('\n');
-			System.out.println("最终的最优结果为：" + maxFitness / 5);
+//			System.out.println("最终的最优结果为：" + maxFitness / 5);
 		}
 		fw.close();
 	}

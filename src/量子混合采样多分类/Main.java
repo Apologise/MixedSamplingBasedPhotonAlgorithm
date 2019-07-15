@@ -9,22 +9,22 @@ public class Main {
 		String[] dataSets = { "glass1", "pima", "glass0", "yeast1", "vehicle1", "glass0123vs456", "ecoli1",
 				"newthyroid1", "newthyroid2", "ecoli2", "glass6", "yeast3", "ecoli3", "glass016v2", "yeast1v7",
 				"glass4", "glass5", "yeast2v8", "yeast4", "yeast6" };
-	
-		for (int set = 0; set <= 5; ++set) {
-			System.out.println("当前运行数据集为：" + dataSets[set]);
-			for (int cls = 0; cls <= 3; ++cls) {
+	String[] dataSets1 = {"glass016v2"};
+		for (int set = 0; set < dataSets1.length; ++set) {
+			System.out.println("当前运行数据集为：" + dataSets1[set]);
+			for (int cls = 0; cls <= 0; ++cls) {
 				
 				File file = new File("实验结果\\dev0基于边界的实验结果(最大值)\\"+Enum_Classifier.values()[cls]+"K邻居集成集成（过采样+KMeans+修复BUG版+0.5+调试Bug版+少数类移除BUG）.dat");
 		        // 创建文件
 		        file.createNewFile();
 		        // creates a FileWriter Object
 				FileWriter fw = new FileWriter(file,true);
-				try {
-				fw.write(dataSets[set]+": ");
-				Setting setting = new Setting(10, 500, Enum_Classifier.values()[cls]);
-				InstancesSet instancesSet = new InstancesSet(dataSets[set], setting);
+	//			try {
+				fw.write(dataSets1[set]+": ");
+				Setting setting = new Setting(20, 500, Enum_Classifier.values()[cls]);
+				InstancesSet instancesSet = new InstancesSet(dataSets1[set], setting);
 				double sum = 0;
-				for (int i = 0; i <=  4; ++i) {
+				for (int i = 0; i <=  0; ++i) {
 					instancesSet.initializeInstancesSet(i);
 					QuantumModel quantumModel = new QuantumModel(setting, instancesSet);
 					quantumModel.run();
@@ -33,12 +33,12 @@ public class Main {
 				}
 				sum /= 5;
 				fw.write(""+sum+"\n");
-				}catch(Exception e) {
-					e.printStackTrace();
-				}finally {
+//				}catch(Exception e) {
+	//				e.printStackTrace();
+	//		    }finally {
 					fw.flush();
 					fw.close();
-				}
+	//		}
 			}
 		}
 	}
