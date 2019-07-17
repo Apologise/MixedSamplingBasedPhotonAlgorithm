@@ -45,7 +45,7 @@ public class Individual implements Serializable {
 		this.instancesSet = instancesSet;
 		fitness = 0d;
 	}
-
+	
 	/*
 	 * TODO:初始化个体，对个体中的引用对象进行实例化，防止出现null类型
 	 */
@@ -59,11 +59,13 @@ public class Individual implements Serializable {
 		handledMajorityInstances = new Instances(instancesSet.rawInstances);
 		handledMajorityInstances.clear();
 		// 初始化allHanledInstance;
+		
 		allHandledInstances = new ArrayList<List<Instance>>();
 		for (int i = 0; i < setting.K; ++i) {
 			List<Instance> list = new ArrayList<Instance>();
 			allHandledInstances.add(list);
 		}
+		
 	}
 
 	/*
@@ -243,9 +245,7 @@ public class Individual implements Serializable {
 
 		// 1. 首先将所有样本按照类标进行拆分，此时存储所有样本的对象为handledInstances
 		instancesByClass = splitByClass();
-		for(int i = 0; i < handledInstances.size(); ++i) {
-			
-		}
+		
 		
 		// 求出类别中数量最多的类别的样本
 		int max = 0;

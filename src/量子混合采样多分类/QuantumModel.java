@@ -6,7 +6,14 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.Enumeration;
 import java.util.FormatFlagsConversionMismatchException;
+
+import weka.core.AbstractInstance;
+import weka.core.Attribute;
+import weka.core.DenseInstance;
+import weka.core.Instance;
+import weka.core.Instances;
 
 public class QuantumModel {
 	public Individual[] population; // 种群个体
@@ -269,3 +276,7 @@ public class QuantumModel {
 		fw.close();
 	}
 }
+
+
+
+

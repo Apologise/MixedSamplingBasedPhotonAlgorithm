@@ -460,6 +460,7 @@ public class InstancesSet implements Serializable{
 				systhetic.add(inst);
 			}
 			_valInstances.addAll(systhetic);
+
 		}
 		//½«centerInstances´ÓÖÐÉ¾³ý
 		/*

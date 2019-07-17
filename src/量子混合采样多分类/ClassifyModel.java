@@ -13,10 +13,14 @@ import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.functions.SMO;
 import weka.classifiers.lazy.IBk;
 import weka.classifiers.trees.J48;
+import weka.clusterers.SimpleKMeans;
+import weka.core.DistanceFunction;
 import weka.core.Instance;
 import weka.core.Instances;
+import weka.core.Utils;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Normalize;
+import weka.filters.unsupervised.attribute.Remove;
 
 /*
  * Author: apolo
@@ -33,6 +37,7 @@ public class ClassifyModel {
 	public List<List<Instance>> m_trainInstancesByClass;
 	public List<List<Double>> distanceMatrix;
 	public Enum_Classifier cls;
+	public List<Instance> clusterCenters;
 	public Instances normalizeInstances;
 	
 	
@@ -45,6 +50,7 @@ public class ClassifyModel {
 		m_test = test;
 		flag = new int[m_test.size()]; 
 		cls = classfier;
+		/*
 		normalizeInstances = new Instances(m_test);
 		normalizeInstances.clear();
 		for(Instance inst: m_train) {
@@ -52,7 +58,9 @@ public class ClassifyModel {
 		}
 		normalizeInstances = normalizeInstances(normalizeInstances);
 		m_test = normalizeInstances(m_test);
+		*/
 		splitTrainByClass();
+		clusterCenters = new ArrayList<Instance>();
 	}
 	
 	public Instances normalizeInstances(Instances instances) throws Exception {
@@ -167,13 +175,13 @@ public class ClassifyModel {
 	 * RETURN: 返回成员变量m_trainInstancesByClass
 	 * */
 	public void splitTrainByClass() {
-			int numOfClass = normalizeInstances.get(0).numClasses();
+			int numOfClass = m_train.get(0).numClasses();
 			m_trainInstancesByClass = new ArrayList<>();
 			for(int i = 0; i < numOfClass; ++i) {
 				List<Instance> temp = new ArrayList<>();
 				m_trainInstancesByClass.add(temp);
 			}
-			for(Instance inst: normalizeInstances) {
+			for(Instance inst: m_train) {
 				int classLabel = (int)inst.classValue();
 				//获得类标为classLabel的List，并将其加入其中
 				m_trainInstancesByClass.get(classLabel).add(inst);
@@ -198,7 +206,6 @@ public class ClassifyModel {
 			//2. 使用该分类器进行预测
 				int predictLabel = (int)evaluation.evaluateModelOnce(cls, inst);
 				flag[i] = predictLabel;
-			
 		}
 	}
 	/*
@@ -297,6 +304,42 @@ public class ClassifyModel {
 		return Math.sqrt(distance);
 	}
 	
+	/*
+	 * TODO: 利用Kmeans算法求得聚类中心
+	 * */
+	public void  getClusterCenters() throws Exception{
+		//将ArrayList类型转为Instances类型
+		List<Instances> instancesOfClass = new ArrayList<>();
+		for(int i = 0; i < m_trainInstancesByClass.size(); ++i) {
+			Instances temp = new Instances(m_test);
+			temp.clear();
+			for(Instance inst: m_trainInstancesByClass.get(i)) {
+				temp.add(inst);
+			}
+			instancesOfClass.add(temp);
+		}
+		//对每个类进行聚类处理
+		for(int i = 0; i < instancesOfClass.size(); ++i) {
+			//得到聚类中心个数
+			int numOfCentroids = (int)(instancesOfClass.get(i).size()*0.1);
+			//对多数类进行聚类
+			SimpleKMeans kMeans = new SimpleKMeans();
+			//设置聚类个数为少数类的样本数
+			Remove remove = new Remove();
+			String[] options = Utils.splitOptions("-R "+instancesOfClass.get(i).numAttributes());
+			remove.setOptions(options);
+			remove.setInputFormat(instancesOfClass.get(i));
+			Instances clusterdata = Filter.useFilter(instancesOfClass.get(i), remove);
+			 
+			kMeans.setNumClusters(numOfCentroids);
+			kMeans.buildClusterer(clusterdata);
+			Instances centers = kMeans.getClusterCentroids();
+			centers.insertAttributeAt(instancesOfClass.get(i).attribute(instancesOfClass.get(i).numAttributes()-1),centers.numAttributes());
+			centers.setClassIndex(centers.numAttributes()-1);
+			//将产生的中心点作为多数类
+		}
+	}
+	
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		InstanceDao dao = new InstanceDao();
@@ -306,12 +349,10 @@ public class ClassifyModel {
 		for(int i = 0; i < rawInstances.size(); ++i) {
 			trainInstances.add(rawInstances.get(i));
 		}
-		
 		ClassifyModel clsModel = new ClassifyModel(trainInstances, 
 				validationInstances, Enum_Classifier.C45);
-		clsModel.evaluateTestInstance();
-		double result = clsModel.calMultiGMean();
-		System.out.println(result);
+		clsModel.getClusterCenters();
 	}
-
 }
+
+
