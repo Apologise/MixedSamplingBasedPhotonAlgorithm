@@ -8,7 +8,8 @@ public class Main {
 		// TODO Auto-generated method stub
 		String[] dataSets = { "glass1", "pima", "glass0", "yeast1", "vehicle1", "glass0123vs456", "ecoli1",
 				"newthyroid1", "newthyroid2", "ecoli2", "glass6", "yeast3", "ecoli3", "glass016v2", "yeast1v7",
-				"glass4", "glass5", "yeast2v8", "yeast4", "yeast6" };
+				"glass4", "glass5", "yeast2v8", "yeast4", "yeast6", "segmentMulti", "taeMulti", "vehicleMulti",
+				"vowelMulti","segmentMulti"};
 		for(int cnt = 0; cnt < 10; ++cnt) {
 		for (int set = 0; set < dataSets.length; ++set) {
 			System.out.println("当前运行数据集为：" + dataSets[set]);

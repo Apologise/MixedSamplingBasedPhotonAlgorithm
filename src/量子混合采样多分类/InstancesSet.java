@@ -81,6 +81,7 @@ public class InstancesSet implements Serializable{
 		/*
 		//将数据集进行归一化
 		rawInstances = normalizeInstances(rawInstances);
+		
 		*/
 		/*
 		initializeDistanceMatrix(rawInstances);

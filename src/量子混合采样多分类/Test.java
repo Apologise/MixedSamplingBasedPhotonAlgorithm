@@ -1,26 +1,52 @@
-package Á¿×Ó»ìºÏ²ÉÑù¶à·ÖÀà;
+package é‡å­æ··åˆé‡‡æ ·å¤šåˆ†ç±»;
 
+import java.util.HashSet;
+import java.util.Map.Entry;
 import java.util.Random;
+import java.util.Scanner;
+import java.util.Set;
+import java.util.TreeMap;
+
+import weka.classifiers.Classifier;
+import weka.classifiers.Evaluation;
+import weka.classifiers.trees.J48;
+import weka.core.Instance;
+import weka.core.Instances;
 
 public class Test {
-	public static void main(String[] args) {
-		System.out.println(Enum_Classifier.values()[0]);
+	public static void main(String[] args) throws Exception {
+		InstanceDao instanceDao = new InstanceDao();
+		Instances rawInstances = instanceDao.loadDataFromFile("å¤šåˆ†ç±»æ•°æ®é›†/balance-5-fold/balance-5-1tra.arff");
+		System.out.println(rawInstances.get(0).toString());
+		Instances newInstances= new Instances(rawInstances);
+		Instance instance = newInstances.get(0);
+		instance.setValue(0, -1);
+		System.out.println(instance.toString());
+		System.out.println(rawInstances.get(0).toString());
+		/*
+		for(Instance inst: rawInstances) {
+			System.out.println(inst.toString());
+			int classLabel = (int)inst.classValue();
+			if(classLabel == 2) {
+				inst.setClassValue(classLabel-1);
+			}
+			System.out.println(inst.toString());
+		}
+		
+		Instances testInstances = instanceDao.loadDataFromFile("å¤šåˆ†ç±»æ•°æ®é›†/balance-5-fold/balance-5-1tst.arff");
+		Classifier cls = new J48();
+		cls.buildClassifier(rawInstances);
+		Evaluation eval = new Evaluation(rawInstances);
+		eval.evaluateModel(cls, testInstances);
+		System.out.println("ROC:"+eval.areaUnderROC(1));
+		double[][] confusionMatrix = eval.confusionMatrix();
+		for(int i = 0; i < confusionMatrix.length; ++i) {
+			for(int j = 0; j < confusionMatrix[i].length; ++j) {
+				System.out.print(confusionMatrix[i][j]+ " ");
+			}
+			System.out.println();
+		}
+		*/
 	}
-}
 
-interface Test1{
-	public void print() ;
-}
-
-class Test2 implements Test1{
-
-	@Override
-	public void print() {
-		// TODO Auto-generated method stub
-		System.out.println("ÕâÊÇ¼Ì³ĞÀà·½·¨");
-	}
-}
-
-class Test3 extends Test2 implements Test1{
-	
 }

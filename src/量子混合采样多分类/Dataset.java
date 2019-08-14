@@ -6,6 +6,372 @@ public class Dataset {
 	public static String[] chooseDataset(String dataName, int n) {
 		String[] strings = {"数据集找不到",""};
 		//ecoli1
+		String[] trainSetAutomobile = {
+				"多分类数据集/automobile-5-fold/automobile-5-1tra.arff",
+				"多分类数据集/automobile-5-fold/automobile-5-2tra.arff",
+				"多分类数据集/automobile-5-fold/automobile-5-3tra.arff",
+				"多分类数据集/automobile-5-fold/automobile-5-4tra.arff",
+				"多分类数据集/automobile-5-fold/automobile-5-5tra.arff",
+		};
+		String[] testSetAutomobile = {
+				"多分类数据集/automobile-5-fold/automobile-5-1tst.arff",
+				"多分类数据集/automobile-5-fold/automobile-5-2tst.arff",
+				"多分类数据集/automobile-5-fold/automobile-5-3tst.arff",
+				"多分类数据集/automobile-5-fold/automobile-5-4tst.arff",
+				"多分类数据集/automobile-5-fold/automobile-5-5tst.arff",
+		};
+		if(dataName.equals("automobileMulti")&& n == 0) {
+			return trainSetAutomobile;
+		}else if(dataName.equals("automobileMulti")&& n == 1) {
+			return testSetAutomobile;
+		}
+		String[] trainSetBalance = {
+				"多分类数据集/balance-5-fold/balance-5-1tra.arff",
+				"多分类数据集/balance-5-fold/balance-5-2tra.arff",
+				"多分类数据集/balance-5-fold/balance-5-3tra.arff",
+				"多分类数据集/balance-5-fold/balance-5-4tra.arff",
+				"多分类数据集/balance-5-fold/balance-5-5tra.arff",
+		};
+		String[] testSetBalance = {
+				"多分类数据集/balance-5-fold/balance-5-1tst.arff",
+				"多分类数据集/balance-5-fold/balance-5-2tst.arff",
+				"多分类数据集/balance-5-fold/balance-5-3tst.arff",
+				"多分类数据集/balance-5-fold/balance-5-4tst.arff",
+				"多分类数据集/balance-5-fold/balance-5-5tst.arff",
+		};
+		if(dataName.equals("balanceMulti")&& n == 0) {
+			return trainSetBalance;
+		}else if(dataName.equals("balanceMulti")&& n == 1) {
+			return testSetBalance;
+		}
+		String[] trainSetContraceptive = {
+				"多分类数据集/contraceptive-5-fold/contraceptive-5-1tra.arff",
+				"多分类数据集/contraceptive-5-fold/contraceptive-5-2tra.arff",
+				"多分类数据集/contraceptive-5-fold/contraceptive-5-3tra.arff",
+				"多分类数据集/contraceptive-5-fold/contraceptive-5-4tra.arff",
+				"多分类数据集/contraceptive-5-fold/contraceptive-5-5tra.arff",
+		};
+		String[] testSetContraceptive = {
+				"多分类数据集/contraceptive-5-fold/contraceptive-5-1tst.arff",
+				"多分类数据集/contraceptive-5-fold/contraceptive-5-2tst.arff",
+				"多分类数据集/contraceptive-5-fold/contraceptive-5-3tst.arff",
+				"多分类数据集/contraceptive-5-fold/contraceptive-5-4tst.arff",
+				"多分类数据集/contraceptive-5-fold/contraceptive-5-5tst.arff",
+		};
+		if(dataName.equals("contraceptiveMulti")&& n == 0) {
+			return trainSetContraceptive;
+		}else if(dataName.equals("contraceptiveMulti")&& n == 1) {
+			return testSetContraceptive;
+		}
+		String[] trainSetDermatology = {
+				"多分类数据集/dermatology-5-fold/dermatology-5-1tra.arff",
+				"多分类数据集/dermatology-5-fold/dermatology-5-2tra.arff",
+				"多分类数据集/dermatology-5-fold/dermatology-5-3tra.arff",
+				"多分类数据集/dermatology-5-fold/dermatology-5-4tra.arff",
+				"多分类数据集/dermatology-5-fold/dermatology-5-5tra.arff",
+		};
+		String[] testSetDermatology = {
+				"多分类数据集/dermatology-5-fold/dermatology-5-1tst.arff",
+				"多分类数据集/dermatology-5-fold/dermatology-5-2tst.arff",
+				"多分类数据集/dermatology-5-fold/dermatology-5-3tst.arff",
+				"多分类数据集/dermatology-5-fold/dermatology-5-4tst.arff",
+				"多分类数据集/dermatology-5-fold/dermatology-5-5tst.arff",
+		};
+		if(dataName.equals("dermatologyMulti")&& n == 0) {
+			return trainSetDermatology;
+		}else if(dataName.equals("dermatologyMulti")&& n == 1) {
+			return testSetDermatology;
+		}
+		String[] trainSetEcoli = {
+				"多分类数据集/ecoli-5-fold/ecoli-5-1tra.arff",
+				"多分类数据集/ecoli-5-fold/ecoli-5-2tra.arff",
+				"多分类数据集/ecoli-5-fold/ecoli-5-3tra.arff",
+				"多分类数据集/ecoli-5-fold/ecoli-5-4tra.arff",
+				"多分类数据集/ecoli-5-fold/ecoli-5-5tra.arff",
+		};
+		String[] testSetEcoli = {
+				"多分类数据集/ecoli-5-fold/ecoli-5-1tst.arff",
+				"多分类数据集/ecoli-5-fold/ecoli-5-2tst.arff",
+				"多分类数据集/ecoli-5-fold/ecoli-5-3tst.arff",
+				"多分类数据集/ecoli-5-fold/eoli-5-4tst.arff",
+				"多分类数据集/ecoli-5-fold/ecoli-5-5tst.arff",
+		};
+		if(dataName.equals("ecoliMulti")&& n == 0) {
+			return trainSetEcoli;
+		}else if(dataName.equals("ecoliMulti")&& n == 1) {
+			return testSetEcoli;
+		}
+		
+		String[] trainSetGlass = {
+				"多分类数据集/glass-5-fold/glass-5-1tra.arff",
+				"多分类数据集/glass-5-fold/glass-5-2tra.arff",
+				"多分类数据集/glass-5-fold/glass-5-3tra.arff",
+				"多分类数据集/glass-5-fold/glass-5-4tra.arff",
+				"多分类数据集/glass-5-fold/glass-5-5tra.arff",
+		};
+		String[] testSetGlass = {
+				"多分类数据集/glass-5-fold/glass-5-1tst.arff",
+				"多分类数据集/glass-5-fold/glass-5-2tst.arff",
+				"多分类数据集/glass-5-fold/glass-5-3tst.arff",
+				"多分类数据集/glass-5-fold/glass-5-4tst.arff",
+				"多分类数据集/glass-5-fold/glass-5-5tst.arff",
+		};
+		if(dataName.equals("glassMulti")&& n == 0) {
+			return trainSetGlass;
+		}else if(dataName.equals("glassMulti")&& n == 1) {
+			return testSetGlass;
+		}
+		
+		String[] trainSetHayesroth = {
+				"多分类数据集/hayes-roth-5-fold/hayes-roth-5-1tra.arff",
+				"多分类数据集/hayes-roth-5-fold/hayes-roth-5-2tra.arff",
+				"多分类数据集/hayes-roth-5-fold/hayes-roth-5-3tra.arff",
+				"多分类数据集/hayes-roth-5-fold/hayes-roth-5-4tra.arff",
+				"多分类数据集/hayes-roth-5-fold/hayes-roth-5-5tra.arff",
+		};
+		String[] testSetHayesroth = {
+				"多分类数据集/hayes-roth-5-fold/hayes-roth-5-1tst.arff",
+				"多分类数据集/hayes-roth-5-fold/hayes-roth-5-2tst.arff",
+				"多分类数据集/hayes-roth-5-fold/hayes-roth-5-3tst.arff",
+				"多分类数据集/hayes-roth-5-fold/hayes-roth-5-4tst.arff",
+				"多分类数据集/hayes-roth-5-fold/hayes-roth-5-5tst.arff",
+		};
+		if(dataName.equals("hayesrothMulti")&& n == 0) {
+			return trainSetHayesroth;
+		}else if(dataName.equals("hayesrothMulti")&& n == 1) {
+			return testSetHayesroth;
+		}
+		String[] trainSetLymphography = {
+				"多分类数据集/lymphography-5-fold/lymphography-5-1tra.arff",
+				"多分类数据集/lymphography-5-fold/lymphography-5-2tra.arff",
+				"多分类数据集/lymphography-5-fold/lymphography-5-3tra.arff",
+				"多分类数据集/lymphography-5-fold/lymphography-5-4tra.arff",
+				"多分类数据集/lymphography-5-fold/lymphography-5-5tra.arff",
+		};
+		String[] testSetLymphography = {
+				"多分类数据集/lymphography-5-fold/lymphography-5-1tst.arff",
+				"多分类数据集/lymphography-5-fold/lymphography-5-2tst.arff",
+				"多分类数据集/lymphography-5-fold/lymphography-5-3tst.arff",
+				"多分类数据集/lymphography-5-fold/lymphography-5-4tst.arff",
+				"多分类数据集/lymphography-5-fold/lymphography-5-5tst.arff",
+		};
+		if(dataName.equals("lymphographyMulti")&& n == 0) {
+			return trainSetLymphography;
+		}else if(dataName.equals("lymphographyMulti")&& n == 1) {
+			return testSetLymphography;
+		}
+		String[] trainSetNewthroid = {
+				"多分类数据集/newthyroid-5-fold/newthyroid-5-1tra.arff",
+				"多分类数据集/newthyroid-5-fold/newthyroid-5-2tra.arff",
+				"多分类数据集/newthyroid-5-fold/newthyroid-5-3tra.arff",
+				"多分类数据集/newthyroid-5-fold/newthyroid-5-4tra.arff",
+				"多分类数据集/newthyroid-5-fold/newthyroid-5-5tra.arff",
+		};
+		String[] testSetNewthroid = {
+				"多分类数据集/newthyroid-5-fold/newthyroid-5-1tst.arff",
+				"多分类数据集/newthyroid-5-fold/newthyroid-5-2tst.arff",
+				"多分类数据集/newthyroid-5-fold/newthyroid-5-3tst.arff",
+				"多分类数据集/newthyroid-5-fold/newthyroid-5-4tst.arff",
+				"多分类数据集/newthyroid-5-fold/newthyroid-5-5tst.arff",
+		};
+		if(dataName.equals("newthyroidMulti")&& n == 0) {
+			return trainSetNewthroid;
+		}else if(dataName.equals("newthyroidMulti")&& n == 1) {
+			return testSetNewthroid;
+		}
+		String[] trainSetPageblocks = {
+				"多分类数据集/page-blocks-5-fold/page-blocks-5-1tra.arff",
+				"多分类数据集/page-blocks-5-fold/page-blocks-5-2tra.arff",
+				"多分类数据集/page-blocks-5-fold/page-blocks-5-3tra.arff",
+				"多分类数据集/page-blocks-5-fold/page-blocks-5-4tra.arff",
+				"多分类数据集/page-blocks-5-fold/page-blocks-5-5tra.arff",
+		};
+		String[] testSetPageBlocks = {
+				"多分类数据集/page-blocks-5-fold/page-blocks-5-1tst.arff",
+				"多分类数据集/page-blocks-5-fold/page-blocks-5-2tst.arff",
+				"多分类数据集/page-blocks-5-fold/page-blocks-5-3tst.arff",
+				"多分类数据集/page-blocks-5-fold/page-blocks-5-4tst.arff",
+				"多分类数据集/page-blocks-5-fold/page-blocks-5-5tst.arff",
+		};
+		if(dataName.equals("pageblocksMulti")&& n == 0) {
+			return trainSetPageblocks;
+		}else if(dataName.equals("pageblocksMulti")&& n == 1) {
+			return testSetPageBlocks;
+		}
+		
+		String[] trainSetPenbased = {
+				"多分类数据集/penbased-5-fold/penbased-5-1tra.arff",
+				"多分类数据集/penbased-5-fold/penbased-5-2tra.arff",
+				"多分类数据集/penbased-5-fold/penbased-5-3tra.arff",
+				"多分类数据集/penbased-5-fold/penbased-5-4tra.arff",
+				"多分类数据集/penbased-5-fold/penbased-5-5tra.arff",
+		};
+		String[] testSetPenbased = {
+				"多分类数据集/penbased-5-fold/penbased-5-1tst.arff",
+				"多分类数据集/penbased-5-fold/penbased-5-2tst.arff",
+				"多分类数据集/penbased-5-fold/penbased-5-3tst.arff",
+				"多分类数据集/penbased-5-fold/penbased-5-4tst.arff",
+				"多分类数据集/penbased-5-fold/penbased-5-5tst.arff",
+		};
+		if(dataName.equals("penbasedMulti")&& n == 0) {
+			return trainSetPenbased;
+		}else if(dataName.equals("penbasedMulti")&& n == 1) {
+			return testSetPenbased;
+		}
+		String[] trainSetShuttle = {
+				"多分类数据集/shuttle-5-fold/shuttle-5-1tra.arff",
+				"多分类数据集/shuttle-5-fold/shuttle-5-2tra.arff",
+				"多分类数据集/shuttle-5-fold/shuttle-5-3tra.arff",
+				"多分类数据集/shuttle-5-fold/shuttle-5-4tra.arff",
+				"多分类数据集/shuttle-5-fold/shuttle-5-5tra.arff",
+		};
+		String[] testSetShuttle = {
+				"多分类数据集/shuttle-5-fold/shuttle-5-1tst.arff",
+				"多分类数据集/shuttle-5-fold/shuttle-5-2tst.arff",
+				"多分类数据集/shuttle-5-fold/shuttle-5-3tst.arff",
+				"多分类数据集/shuttle-5-fold/shuttle-5-4tst.arff",
+				"多分类数据集/shuttle-5-fold/shuttle-5-5tst.arff",
+		};
+		if(dataName.equals("shuttleMulti")&& n == 0) {
+			return trainSetShuttle;
+		}else if(dataName.equals("shuttleMulti")&& n == 1) {
+			return testSetShuttle;
+		}
+		String[] trainSetThyroid = {
+				"多分类数据集/thyroid-5-fold/thyroid-5-1tra.arff",
+				"多分类数据集/thyroid-5-fold/thyroid-5-2tra.arff",
+				"多分类数据集/thyroid-5-fold/thyroid-5-3tra.arff",
+				"多分类数据集/thyroid-5-fold/thyroid-5-4tra.arff",
+				"多分类数据集/thyroid-5-fold/thyroid-5-5tra.arff",
+		};
+		String[] testSetThyroid = {
+				"多分类数据集/thyroid-5-fold/thyroid-5-1tst.arff",
+				"多分类数据集/thyroid-5-fold/thyroid-5-2tst.arff",
+				"多分类数据集/thyroid-5-fold/thyroid-5-3tst.arff",
+				"多分类数据集/thyroid-5-fold/thyroid-5-4tst.arff",
+				"多分类数据集/thyroid-5-fold/thyroid-5-5tst.arff",
+		};
+		if(dataName.equals("thyroidMulti")&& n == 0) {
+			return trainSetThyroid;
+		}else if(dataName.equals("thyroidMulti")&& n == 1) {
+			return testSetThyroid;
+		}
+		
+		String[] trainSetWine = {
+				"多分类数据集/wine-5-fold/wine-5-1tra.arff",
+				"多分类数据集/wine-5-fold/wine-5-2tra.arff",
+				"多分类数据集/wine-5-fold/wine-5-3tra.arff",
+				"多分类数据集/wine-5-fold/wine-5-4tra.arff",
+				"多分类数据集/wine-5-fold/wine-5-5tra.arff",
+		};
+		String[] testSetWine = {
+				"多分类数据集/wine-5-fold/wine-5-1tst.arff",
+				"多分类数据集/wine-5-fold/wine-5-2tst.arff",
+				"多分类数据集/wine-5-fold/wine-5-3tst.arff",
+				"多分类数据集/wine-5-fold/wine-5-4tst.arff",
+				"多分类数据集/wine-5-fold/wine-5-5tst.arff",
+		};
+		if(dataName.equals("wineMulti")&& n == 0) {
+			return trainSetWine;
+		}else if(dataName.equals("wineMulti")&& n == 1) {
+			return testSetWine;
+		}
+		String[] trainSetYeast = {
+				"多分类数据集/yeast-5-fold/yeast-5-1tra.arff",
+				"多分类数据集/yeast-5-fold/yeast-5-2tra.arff",
+				"多分类数据集/yeast-5-fold/yeast-5-3tra.arff",
+				"多分类数据集/yeast-5-fold/yeast-5-4tra.arff",
+				"多分类数据集/yeast-5-fold/yeast-5-5tra.arff",
+		};
+		String[] testSetYeast = {
+				"多分类数据集/yeast-5-fold/yeast-5-1tst.arff",
+				"多分类数据集/yeast-5-fold/yeast-5-2tst.arff",
+				"多分类数据集/yeast-5-fold/yeast-5-3tst.arff",
+				"多分类数据集/yeast-5-fold/yeast-5-4tst.arff",
+				"多分类数据集/yeast-5-fold/yeast-5-5tst.arff",
+		};
+		if(dataName.equals("yeastMulti")&& n == 0) {
+			return trainSetYeast;
+		}else if(dataName.equals("yeastMulti")&& n == 1) {
+			return testSetYeast;
+		}
+		String[] trainSetVehicle = {
+				"多分类数据集/vehicle-5-fold/vehicle-5-1tra.arff",
+				"多分类数据集/vehicle-5-fold/vehicle-5-2tra.arff",
+				"多分类数据集/vehicle-5-fold/vehicle-5-3tra.arff",
+				"多分类数据集/vehicle-5-fold/vehicle-5-4tra.arff",
+				"多分类数据集/vehicle-5-fold/vehicle-5-5tra.arff",
+		};
+		String[] testSetVehicle = {
+				"多分类数据集/vehicle-5-fold/vehicle-5-1tst.arff",
+				"多分类数据集/vehicle-5-fold/vehicle-5-2tst.arff",
+				"多分类数据集/vehicle-5-fold/vehicle-5-3tst.arff",
+				"多分类数据集/vehicle-5-fold/vehicle-5-4tst.arff",
+				"多分类数据集/vehicle-5-fold/vehicle-5-5tst.arff",
+		};
+		if(dataName.equals("vehicleMulti")&& n == 0) {
+			return trainSetVehicle;
+		}else if(dataName.equals("vehicleMulti")&& n == 1) {
+			return testSetVehicle;
+		}
+		
+		String[] trainSetVowel = {
+				"多分类数据集/vowel-5-fold/vowel-5-1tra.arff",
+				"多分类数据集/vowel-5-fold/vowel-5-2tra.arff",
+				"多分类数据集/vowel-5-fold/vowel-5-3tra.arff",
+				"多分类数据集/vowel-5-fold/vowel-5-4tra.arff",
+				"多分类数据集/vowel-5-fold/vowel-5-5tra.arff",
+		};
+		String[] testSetVowel = {
+				"多分类数据集/vowel-5-fold/vowel-5-1tst.arff",
+				"多分类数据集/vowel-5-fold/vowel-5-2tst.arff",
+				"多分类数据集/vowel-5-fold/vowel-5-3tst.arff",
+				"多分类数据集/vowel-5-fold/vowel-5-4tst.arff",
+				"多分类数据集/vowel-5-fold/vowel-5-5tst.arff",
+		};
+		if(dataName.equals("vowelMulti")&& n == 0) {
+			return trainSetVowel;
+		}else if(dataName.equals("vowelMulti")&& n == 1) {
+			return testSetVowel;
+		}
+		String[] trainSetTae = {
+				"多分类数据集/tae-5-fold/tae-5-1tra.arff",
+				"多分类数据集/tae-5-fold/tae-5-2tra.arff",
+				"多分类数据集/tae-5-fold/tae-5-3tra.arff",
+				"多分类数据集/tae-5-fold/tae-5-4tra.arff",
+				"多分类数据集/tae-5-fold/tae-5-5tra.arff",
+		};
+		String[] testSetTae = {
+				"多分类数据集/tae-5-fold/tae-5-1tst.arff",
+				"多分类数据集/tae-5-fold/tae-5-2tst.arff",
+				"多分类数据集/tae-5-fold/tae-5-3tst.arff",
+				"多分类数据集/tae-5-fold/tae-5-4tst.arff",
+				"多分类数据集/tae-5-fold/tae-5-5tst.arff",
+		};
+		if(dataName.equals("taeMulti")&& n == 0) {
+			return trainSetTae;
+		}else if(dataName.equals("taeMulti")&& n == 1) {
+			return testSetTae;
+		}
+		String[] trainSetSegment = {
+				"多分类数据集/segment-5-fold/segment-5-1tra.arff",
+				"多分类数据集/segment-5-fold/segment-5-2tra.arff",
+				"多分类数据集/segment-5-fold/segment-5-3tra.arff",
+				"多分类数据集/segment-5-fold/segment-5-4tra.arff",
+				"多分类数据集/segment-5-fold/segment-5-5tra.arff",
+		};
+		String[] testSetSegment = {
+				"多分类数据集/segment-5-fold/segment-5-1tst.arff",
+				"多分类数据集/segment-5-fold/segment-5-2tst.arff",
+				"多分类数据集/segment-5-fold/segment-5-3tst.arff",
+				"多分类数据集/segment-5-fold/segment-5-4tst.arff",
+				"多分类数据集/segment-5-fold/segment-5-5tst.arff",
+		};
+		if(dataName.equals("segmentMulti")&& n == 0) {
+			return trainSetSegment;
+		}else if(dataName.equals("segmentMulti")&& n == 1) {
+			return testSetSegment;
+		}
 		String[] trainSetEcoli1 = { 
 				"5-fold-ecoli1/ecoli1-5-1tra.arff",
 				"5-fold-ecoli1/ecoli1-5-2tra.arff",
