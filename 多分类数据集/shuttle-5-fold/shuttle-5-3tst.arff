@@ -1,13 +1,13 @@
 @relation shuttle
-@attribute A1 integer[27,126]
-@attribute A2 integer[-4821,5075]
-@attribute A3 integer[21,149]
-@attribute A4 integer[-3939,3830]
-@attribute A5 integer[-188,436]
-@attribute A6 integer[-26739,15164]
-@attribute A7 integer[-48,105]
-@attribute A8 integer[-353,270]
-@attribute A9 integer[-356,266]
+@attribute A1 integer [27,126]
+@attribute A2 integer [-4821,5075]
+@attribute A3 integer [21,149]
+@attribute A4 integer [-3939,3830]
+@attribute A5 integer [-188,436]
+@attribute A6 integer [-26739,15164]
+@attribute A7 integer [-48,105]
+@attribute A8 integer [-353,270]
+@attribute A9 integer [-356,266]
 @attribute Class {1, 2, 3, 4, 5, 6, 7}
 @data
 53,0,77,0,52,-3,25,26,2,1

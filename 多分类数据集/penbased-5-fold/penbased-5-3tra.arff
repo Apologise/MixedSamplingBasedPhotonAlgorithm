@@ -16,8 +16,6 @@
 @attribute At15 integer [0, 100]
 @attribute At16 integer [0, 100]
 @attribute Class {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
-@inputs At1, At2, At3, At4, At5, At6, At7, At8, At9, At10, At11, At12, At13, At14, At15, At16
-@outputs Class
 @data
 0, 57, 31, 68, 72, 90, 100, 100, 76, 75, 50, 51, 28, 25, 16, 0, 1
 0, 100, 7, 92, 5, 68, 19, 45, 86, 34, 100, 45, 74, 23, 67, 0, 4

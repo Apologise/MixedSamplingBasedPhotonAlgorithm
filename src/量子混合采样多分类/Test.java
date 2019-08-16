@@ -17,12 +17,14 @@ public class Test {
 	public static void main(String[] args) throws Exception {
 		InstanceDao instanceDao = new InstanceDao();
 		Instances rawInstances = instanceDao.loadDataFromFile("多分类数据集/balance-5-fold/balance-5-1tra.arff");
-		System.out.println(rawInstances.get(0).toString());
-		Instances newInstances= new Instances(rawInstances);
-		Instance instance = newInstances.get(0);
+	//	System.out.println(rawInstances.get(0).toString());
+		Instance instance = rawInstances.get(0);
+		Instance instance1 = (Instance) instance.copy();
 		instance.setValue(0, -1);
+		instance1.setValue(0, -2);
 		System.out.println(instance.toString());
-		System.out.println(rawInstances.get(0).toString());
+		System.out.println(instance1.toString());
+		System.out.println(instance.toString());
 		/*
 		for(Instance inst: rawInstances) {
 			System.out.println(inst.toString());

@@ -11,7 +11,7 @@ public class Setting implements Serializable{
 	public double maxRotateAngle;	//初始最大旋转角度
 	public double minRotateAngle;
 	public Enum_Classifier cls;
-	public int KDistance = 15;	//用作算测试样本与类别近邻的距离的K值
+	public static int KDistance = 15;	//用作算测试样本与类别近邻的距离的K值
 	public Setting(int popSize, int iteration, Enum_Classifier cls) {
 		this.popSize = popSize;
 		this.iteration = iteration;

@@ -93,7 +93,7 @@ public class Dataset {
 				"多分类数据集/ecoli-5-fold/ecoli-5-1tst.arff",
 				"多分类数据集/ecoli-5-fold/ecoli-5-2tst.arff",
 				"多分类数据集/ecoli-5-fold/ecoli-5-3tst.arff",
-				"多分类数据集/ecoli-5-fold/eoli-5-4tst.arff",
+				"多分类数据集/ecoli-5-fold/ecoli-5-4tst.arff",
 				"多分类数据集/ecoli-5-fold/ecoli-5-5tst.arff",
 		};
 		if(dataName.equals("ecoliMulti")&& n == 0) {

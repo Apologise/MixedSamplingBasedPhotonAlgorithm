@@ -19,8 +19,10 @@ import weka.classifiers.trees.J48;
 import weka.clusterers.SimpleKMeans;
 import weka.core.Instance;
 import weka.core.Instances;
+import weka.core.Settings;
 import weka.core.Utils;
 import weka.filters.Filter;
+import weka.filters.supervised.attribute.ClassOrder;
 import weka.filters.unsupervised.attribute.Normalize;
 import weka.filters.unsupervised.attribute.Remove;
 
@@ -44,6 +46,7 @@ public class ClassifyModel {
 	public List<List<Instance>> centerOfClass;
 	public List<Integer> globalClassOrder;
 	public List<Integer> currentClassOrder;
+	public int DK;
 
 	/*
 	 * trian为已经经过混合采样后的数据集 test为验证集合
@@ -53,6 +56,7 @@ public class ClassifyModel {
 		m_test = test;
 		flag = new int[m_test.size()];
 		cls = classfier;
+		DK = Setting.KDistance;
 		/*
 		 * normalizeInstancesTest = new Instances(m_test);
 		 * normalizeInstancesTest.clear(); normalizeInstancesTrain= new
@@ -68,6 +72,92 @@ public class ClassifyModel {
 			List<Instance> temp = new ArrayList<>();
 			centerOfClass.add(temp);
 		}
+	}
+
+	/*
+	 * TODO: 对一个测试样本进行测试分类 testInstance: 测试样本 cls: 分类器 RETURN: 分类结果
+	 */
+	public int classifySingleInstance(Instance testInstance) throws Exception {
+		// 1. 得到一个测试样本的类标序列
+		List<Integer> classLabelByDistance = getClassLabelByDistance(testInstance, DK);
+		List<Integer> classLabel = new ArrayList<>(classLabelByDistance);
+		do {
+	//		System.out.println("输出当前的类别集合" + classLabel.toString());
+			// 将样本加入到Instances对象中
+			List<Instance> instances = splitByLabelDistance(testInstance, classLabel);
+			Instances trainInstances = new Instances(m_test);
+			trainInstances.clear();
+			for (Instance inst : instances) {
+				trainInstances.add(inst);
+			}
+			// 如果数据集为非平衡数据集，那么对该数据集进行平衡采样
+			// 对测试集进行训练
+			Classifier classifier = chooseClassifier(cls);
+			classifier.buildClassifier(trainInstances);
+			Evaluation evaluation = new Evaluation(trainInstances);
+			int label = (int) evaluation.evaluateModelOnce(classifier, testInstance);
+			int size = classLabel.size();
+			if (label == 0) {// 如果预测为正类，那么将classLabel中的负类类标移除
+				for (int i = size - 1; i >= (size + 1) / 2; --i) {
+					classLabel.remove(i);
+				}
+			} else {// 如果预测为负类，那么将classLabel中的正类类标移除
+				for (int i = 0; i < (classLabel.size() + 1) / 2; ++i) {
+					classLabel.remove(0);
+				}
+			}
+		} while (classLabel.size() > 1);
+		// 当classLabel只剩下一个类标时，便是最终的预测类标
+		return classLabel.get(0);
+	}
+
+	/*
+	 * 根据累到的类标，对数据集进行拆分,，构成一个二分类数据集
+	 */
+	public List<Instance> splitByLabelDistance(Instance testInstance, List<Integer> classOrder) {
+		List<Instance> instances = new ArrayList<Instance>();
+		// 1. 获得当前的类标序列,分为正类和负类
+		List<Integer> positiveLabel = new ArrayList<Integer>();
+		List<Integer> negativeLabel = new ArrayList<Integer>();
+		int size = classOrder.size();
+		for (int i = 0; i < size; ++i) {
+			if (i < (size + 1) / 2) {
+				positiveLabel.add(classOrder.get(i));
+			} else {
+				negativeLabel.add(classOrder.get(i));
+			}
+		}
+
+		// 将positiveLabel类别的样本加入到positive中
+		List<Instance> positiveList = new ArrayList<Instance>();
+		for (int i = 0; i < positiveLabel.size(); ++i) {
+			int label = positiveLabel.get(i);
+			List<Instance> instancesLabel = m_trainInstancesByClass.get(label);
+			for (Instance inst : instancesLabel) {
+				// 将类标设置为0
+				Instance tempInstance = (Instance) inst.copy();
+				tempInstance.setClassValue(0);
+				positiveList.add(tempInstance);
+			}
+		}
+		// 将negativeLabel类别的样本加入到negative中
+		List<Instance> negativeList = new ArrayList<Instance>();
+		// 对划分的类别进行数据集拆分
+		for (int i = 0; i < negativeLabel.size(); ++i) {
+			int label = negativeLabel.get(i);
+			List<Instance> instancesLabel = m_trainInstancesByClass.get(label);
+			for (Instance inst : instancesLabel) {
+				// 将类标设置为1
+				Instance tempInstance = (Instance) inst.copy();
+				tempInstance.setClassValue(1);
+				negativeList.add(tempInstance);
+			}
+		}
+
+		// 将所有样本全部加入到instances中
+		instances.addAll(positiveList);
+		instances.addAll(negativeList);
+		return instances;
 	}
 
 	/*
@@ -121,9 +211,7 @@ public class ClassifyModel {
 				System.out.println();
 			}
 		}
-		if(tm.size() == 1) {
-			System.out.println();
-		}
+
 		// 根据tm存放的内容，得到classOrder
 		for (Entry<Double, Integer> entry : tm.entrySet()) {
 			classOrder.add(entry.getValue());
@@ -253,26 +341,7 @@ public class ClassifyModel {
 		}
 	}
 
-	/*
-	 * TODO: 对测试样本进行评估 RETURN: 返回每一个样本的预测类标数组flag
-	 */
-	public void evaluateTestInstance() throws Exception {
-		Evaluation evaluation = new Evaluation(m_test);
-		// 先初始化flag数组，全部置为-1
-		for (int i = 0; i < flag.length; ++i) {
-			flag[i] = -1;
-		}
-		for (int i = 0; i < m_test.size(); ++i) {
-			Instance inst = m_test.get(i);
-			// 1. 先找到该测试样本所对应的分类器
-			List<Integer> classLabel = getLabelByDistance(inst, m_trainInstancesByClass);
-			// Classifier cls = builderClassifierByBinaryClass(((int)classLabel.get(0)),
-			// ((int)classLabel.get(1)));
-			// 2. 使用该分类器进行预测
-			// int predictLabel = (int)evaluation.evaluateModelOnce(cls, inst);
-			// flag[i] = predictLabel;
-		}
-	}
+	
 
 	/*
 	 * TODO: 根据classLabelByInstance得到类标对，训练一个分类器 RETURN
@@ -319,57 +388,6 @@ public class ClassifyModel {
 		return classifier;
 	}
 
-	/*
-	 * TODO: 根据测试样本得到距离最近的两个类 RETURN: 得到距离最近的2个类的标号
-	 */
-	public List<Integer> getLabelByDistance(Instance testInstance, List<List<Instance>> samples) {
-		List<Integer> classLabelByDistance = new ArrayList<Integer>();
-		// 1. 求出测试样本对每个类的平均距离
-		Map<Integer, Double> distanceForEveryClass = new HashMap<Integer, Double>();
-		for (int i = 0; i < samples.size(); ++i) {
-			Double distance = 0d;
-			for (Instance inst : samples.get(i)) {
-				distance += calDistanceByGaussianKernel(testInstance, inst, 25);
-			}
-			if (samples.get(i).size() == 0) {
-				System.out.println("该类别的训练样本没有");
-				distance = Double.MAX_VALUE;
-				distanceForEveryClass.put(i, distance);
-				continue;
-			}
-			distance /= samples.get(i).size();
-			distanceForEveryClass.put((int) samples.get(i).get(0).classValue(), distance);
-
-		}
-
-		// 2. 对距离排序，得到最近的两个下标
-		List<Entry<Integer, Double>> distanceEntries = new ArrayList<>(distanceForEveryClass.entrySet());
-		// 2.1 对distanceEntries进行排序
-		Collections.sort(distanceEntries, new Comparator<Entry<Integer, Double>>() {
-			@Override
-			public int compare(Entry<Integer, Double> o1, Entry<Integer, Double> o2) {
-				// TODO Auto-generated method stub
-				if (o1.getValue() > o2.getValue()) {
-					return 1;
-				} else if (o1.getValue() < o2.getValue()) {
-					return -1;
-				} else {
-					return 0;
-				}
-			}
-		});
-		// 3. 根据距离大小，由小到大将类标放入classLabel中
-		for (Entry<Integer, Double> entry : distanceEntries) {
-			classLabelByDistance.add(entry.getKey());
-
-		}
-		System.out.println("该样本的真实类标为" + testInstance.classValue());
-		System.out.println("距离最近的类标排序为" + classLabelByDistance.toString());
-		if (classLabelByDistance.size() == 1) {
-			System.out.println();
-		}
-		return classLabelByDistance;
-	}
 
 	public static double calDistance(Instance first, Instance second) {
 		double distance = 0;
@@ -380,56 +398,8 @@ public class ClassifyModel {
 		return Math.sqrt(distance);
 	}
 
-	public double calDistanceMahaton(Instance first, Instance second) {
-		double distance = 0;
-		for (int i = 0; i < first.numAttributes() - 1; ++i) {
-			double diff = first.value(i) - second.value(i);
-			distance += Math.abs(diff);
-		}
-		return distance;
-	}
-
-	public double calDistanceMinkowski(Instance first, Instance second, int p) {
-		double distance = 0;
-		for (int i = 0; i < first.numAttributes() - 1; ++i) {
-			double diff = first.value(i) - second.value(i);
-			diff = Math.abs(diff);
-			distance += Math.pow(diff, p);
-		}
-		return Math.pow(distance, 1.0 / p);
-	}
-
-	public double calDistanceByCos(Instance first, Instance second) {
-		double distance = 0;
-		for (int i = 0; i < first.numAttributes() - 1; ++i) {
-			distance += first.value(i) * second.value(i);
-		}
-		double denominator = 0, denominatorFirst = 0, denominatorSecond = 0;
-		for (int i = 0; i < first.numAttributes() - 1; ++i) {
-			denominatorFirst += first.value(i) * first.value(i);
-			denominatorSecond += second.value(i) * second.value(i);
-		}
-		denominator = Math.sqrt(denominatorFirst) * Math.sqrt(denominatorSecond);
-		distance = distance / denominator;
-		return distance;
-	}
-
-	public double GaussianFunction(Instance first, Instance second, double sigma) {
-		double ans = 0;
-		for (int i = 0; i < first.numAttributes() - 1; ++i) {
-			double temp = first.value(i) - second.value(i);
-			ans += temp * temp;
-		}
-		ans = Math.exp(-ans / 2 * sigma * sigma);
-		return ans;
-	}
-
-	public double calDistanceByGaussianKernel(Instance first, Instance second, double sigma) {
-		double distance = 0;
-		distance = 2 - 2 * GaussianFunction(first, second, sigma);
-		return distance;
-	}
-
+	
+	
 	/*
 	 * TODO: 利用Kmeans算法求得聚类中心
 	 */
@@ -482,13 +452,12 @@ public class ClassifyModel {
 
 		for (int i = 0; i < rank; ++i) {
 			try {
-			int label = (int) instance.classValue();
-			if (label == classLabel.get(i)) {
-				flag = true;
-				break;
-			}
-			}
-			catch (Exception e) {
+				int label = (int) instance.classValue();
+				if (label == classLabel.get(i)) {
+					flag = true;
+					break;
+				}
+			} catch (Exception e) {
 				// TODO: handle exception
 				System.out.println();
 			}
@@ -504,54 +473,57 @@ public class ClassifyModel {
 				"glassMulti", "hayesrothMulti", "lymphographyMulti", "newthyroidMulti", "pageblocksMulti",
 				"penbasedMulti", "shuttleMulti", "thyroidMulti", "wineMulti", "yeastMulti", "vowelMulti",
 				"vehicleMulti", "taeMulti", "segmentMulti" };
-		for (int set = 0; set < 2; ++set) {
-			System.out.println("当前数据集为" + dataSets[set]);
-			String[] trainPath = Dataset.chooseDataset(dataSets[set], 0);
-			String[] testPath = Dataset.chooseDataset(dataSets[set], 1);
-			Instances rawInstances = dao.loadDataFromFile(trainPath[0]);
-			Instances validationInstances = dao.loadDataFromFile(testPath[0]);
+		int[] K = {13,7,13,3,5,5,3,5,3,3,3,3,3,5,3,3,3,5,6};
+		FileWriter fw = new FileWriter("实验结果/多分类框架实验结果/测试分类框架结果.dat", true);
+		for (int set = 11; set < 19; ++set) {
+			Setting.KDistance = K[set];
+			double averageAccuacy = 0.0;
+			for (int fold = 0; fold < 5; ++fold) {
+	//			System.out.println("当前数据集为" + dataSets[set]);
+				
+				
+				String[] trainPath = Dataset.chooseDataset(dataSets[set], 0);
+				String[] testPath = Dataset.chooseDataset(dataSets[set], 1);
+				Instances rawInstances = dao.loadDataFromFile(trainPath[fold]);
+				Instances validationInstances = dao.loadDataFromFile(testPath[fold]);
 
-			List<Instance> trainInstances = new ArrayList<>();
-			for (int i = 0; i < rawInstances.size(); ++i) {
-				trainInstances.add(rawInstances.get(i));
-			}
-			FileWriter fw = new FileWriter("多分类数据集/KNN近邻距离/" + "K" + dataSets[set] + ".dat", true);
-
-			ClassifyModel clsModel = new ClassifyModel(trainInstances, validationInstances, Enum_Classifier.C45);
-			for (int DK = 3; DK < 20; ++DK) {
-				int cnt2 = 0;
-				int cnt3 = 0;
-				int cnt4 = 0;
-				for (Instance inst : validationInstances) {
-					List<Integer> classLabelByDistance = clsModel.getClassLabelByDistance(inst, DK);
-					// System.out.println("该样本的真实类标为：" + inst.classValue());
-					// System.out.println(classLabelByDistance.toString());
-					// fw.write("该测试样本的真实类标为" + inst.classValue() + "\n");
-					/*
-					 * for (int i = 0; i < classLabelByDistance.size(); ++i) { fw.write(" " +
-					 * classLabelByDistance.get(i)); }
-					 */
-					if (isCorrect(inst, 2, classLabelByDistance)) {
-						cnt2++;
-					}
-					if (isCorrect(inst, 3, classLabelByDistance)) {
-						cnt3++;
-					}
-					if (validationInstances.numClasses() >= 4) {
-						if (isCorrect(inst, 4, classLabelByDistance)) {
-							cnt4++;
-						}
-					}
-					// fw.write("\n");
+				List<Instance> trainInstances = new ArrayList<>();
+				for (int i = 0; i < rawInstances.size(); ++i) {
+					trainInstances.add(rawInstances.get(i));
 				}
-				fw.write(" " + DK + ":");
-				fw.write("正确率(2)：" + cnt2 * 1.0 / validationInstances.size());
-				fw.write("正确率(3)：" + cnt3 * 1.0 / validationInstances.size());
-				// fw.write("正确率(4)：" + cnt4 * 1.0 / validationInstances.size());
-				fw.write("\n");
+				
+				int cnt = 0;
+				for (Instance testInstance : validationInstances) {
+					ClassifyModel clsModel = new ClassifyModel(trainInstances, validationInstances,
+							Enum_Classifier.C45);
+//				System.out.println("样本的真实类标为" + (int) testInstance.classValue());
+					int label = clsModel.classifySingleInstance(testInstance);
+//				System.out.println("样本的预测类标为" + label);
+					if (label == (int) testInstance.classValue()) {
+						cnt++;
+//						System.out.println("分类正确");
+					}
+				}
+				averageAccuacy += cnt * 1.0 / validationInstances.size();
 			}
-			fw.close();
+			System.out.print(String.format("%.3f", averageAccuacy/5)+" ");
+			fw.write(String.format("%.3f", averageAccuacy/5));
+			/*
+			 * for (int DK = 3; DK < 20; ++DK) { int cnt2 = 0; int cnt3 = 0; int cnt4 = 0;
+			 * for (Instance inst : validationInstances) { List<Integer>
+			 * classLabelByDistance = clsModel.getClassLabelByDistance(inst, DK);
+			 * 
+			 * if (isCorrect(inst, 2, classLabelByDistance)) { cnt2++; } if (isCorrect(inst,
+			 * 3, classLabelByDistance)) { cnt3++; } if (validationInstances.numClasses() >=
+			 * 4) { if (isCorrect(inst, 4, classLabelByDistance)) { cnt4++; } } //
+			 * fw.write("\n"); } fw.write(" " + DK + ":"); fw.write("正确率(2)：" + cnt2 * 1.0 /
+			 * validationInstances.size()); fw.write("正确率(3)：" + cnt3 * 1.0 /
+			 * validationInstances.size()); // fw.write("正确率(4)：" + cnt4 * 1.0 /
+			 * validationInstances.size()); fw.write("\n"); }
+			 */
+			
 		}
+		 fw.close();
 
 		/*
 		 * // clsModel.getClusterCenters(); // clsModel.getClusterCenters(); int cnt2 =
