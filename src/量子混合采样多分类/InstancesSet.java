@@ -27,7 +27,6 @@ import weka.filters.unsupervised.attribute.Remove;
  * InstancesSet实例变量一旦调用initializeInstancesSet()后，里面的变量都不会被其他对象修改
  * */
 public class InstancesSet implements Serializable{
-	public final String fileName;
 	public Instances rawInstances;	//未经任何处理的原始数据
 	public List<Instance> originInstances;	//经过了归一化、标准化和去除了噪声的数据
 	public List<List<Double>> distanceMatrix;	//存放样本之间的距离矩阵
@@ -39,11 +38,13 @@ public class InstancesSet implements Serializable{
 	public Instances validateInstances;				//测试集
 	public List<Double> instanceOfMargin;			//样本的安全间距
 	public Instances testInstances;
+	public List<Instance> minority;
+	public List<Instance> majority;
 
 	public int fold;
 	
-	public InstancesSet(String fileName, Setting setting) {
-	    this.fileName = fileName;
+	public InstancesSet(Instances instances, Setting setting) {
+	    rawInstances = instances;
 	    noisyK = setting.noisyK;
 	}
 	
@@ -51,13 +52,11 @@ public class InstancesSet implements Serializable{
 	 * TODO:初始化InstancesSet对象中的majrotityInstances, instancesByClass成员
 	 * RETURN： 返回初始化后的成员变量
 	 * */
-	public void initializeInstancesSet(int curFold) throws Exception {
+	public void initializeInstancesSet() throws Exception {
 		InstanceDao instanceDao = new InstanceDao();
-		String[] trainSet = Dataset.chooseDataset(fileName, 0);
-		String[] testSet = Dataset.chooseDataset(fileName, 1);
-		rawInstances = instanceDao.loadDataFromFile("dataset/"+trainSet[curFold]);
+		
 		if(rawInstances == null) {
-			System.out.println();
+			System.out.println("rawInstances为空");
 		}
 		validateInstances = new Instances(rawInstances);
 		validateInstances.clear();
@@ -70,7 +69,6 @@ public class InstancesSet implements Serializable{
 		}
 		*/
 		selectValidation(rawInstances, validateInstances);
-		testInstances = instanceDao.loadDataFromFile("dataset/"+testSet[curFold]);
 		//初始化距离矩阵
 		distanceMatrix = new ArrayList<List<Double>>();
 		initializeDistanceMatrix(rawInstances);
@@ -430,8 +428,8 @@ public class InstancesSet implements Serializable{
 			int centriods = -1;
 			int cenNum = classOfInstance.get(i).size();
 			if(cenNum == 0) {
-				System.out.println("该类没有样本数，程序退出");
-				throw new Exception();
+	//			System.out.println("该类没有样本数，程序退出");
+				continue;
 			}
 			if(cenNum > 20) {
 				centriods = (int)(cenNum*0.5);
@@ -445,7 +443,7 @@ public class InstancesSet implements Serializable{
 			String[] options = Utils.splitOptions("-R "+classOfInstance.get(i).numAttributes());
 			remove.setOptions(options);
 			remove.setInputFormat(classOfInstance.get(i));
-			 Instances clusterdata = Filter.useFilter(classOfInstance.get(i), remove);
+			Instances clusterdata = Filter.useFilter(classOfInstance.get(i), remove);
 			 
 			kMeans.setNumClusters(centriods);
 			kMeans.buildClusterer(clusterdata);
@@ -471,10 +469,12 @@ public class InstancesSet implements Serializable{
 	}
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
+		/*
 		InstanceDao instanceDao = new InstanceDao();
 		Setting setting = new Setting( 5, 1,Enum_Classifier.C45);
 		InstancesSet instancesSet = new InstancesSet("", setting);
 		instancesSet.initializeInstancesSet(1);
 		return;
+		*/
 	}
 }

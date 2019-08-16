@@ -43,7 +43,7 @@ public class GenerateSample {
 						values[j] = inst.value(j) + gap*diff;
 					}catch (Exception e) {
 						// TODO: handle exception
-						System.out.println();
+						System.out.println("采样函数GenerateSample发生错误！");
 					}
 					
 				}

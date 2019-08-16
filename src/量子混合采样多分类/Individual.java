@@ -39,13 +39,14 @@ public class Individual implements Serializable {
 	public Instances handledMajorityInstances;
 	public List<List<Instance>> instancesByClass;
 	public List<List<Instance>> allHandledInstances;
+	public Vote vote;
 
 	public Individual(Setting setting, InstancesSet instancesSet) {
 		this.setting = setting;
 		this.instancesSet = instancesSet;
 		fitness = 0d;
 	}
-	
+
 	/*
 	 * TODO:初始化个体，对个体中的引用对象进行实例化，防止出现null类型
 	 */
@@ -59,13 +60,12 @@ public class Individual implements Serializable {
 		handledMajorityInstances = new Instances(instancesSet.rawInstances);
 		handledMajorityInstances.clear();
 		// 初始化allHanledInstance;
-		
 		allHandledInstances = new ArrayList<List<Instance>>();
 		for (int i = 0; i < setting.K; ++i) {
 			List<Instance> list = new ArrayList<Instance>();
 			allHandledInstances.add(list);
 		}
-		
+
 	}
 
 	/*
@@ -103,6 +103,8 @@ public class Individual implements Serializable {
 		// 测试
 		Evaluation eval = new Evaluation(instancesSet.validateInstances);
 		eval.evaluateModel(ensemble, instancesSet.validateInstances);
+		//保存当前评估器
+		this.vote = ensemble;
 		fitness = eval.areaUnderROC(0);
 	}
 
@@ -188,7 +190,7 @@ public class Individual implements Serializable {
 		}
 		instancesByClass = splitByClass();
 		underSampling();
-		overSampling();
+		overSampling(instancesSet.rawInstances, instancesSet.minority, instancesSet.majority);
 	}
 
 	/*
@@ -219,14 +221,82 @@ public class Individual implements Serializable {
 		for (int i = 0; i < indexOfRemovedInstances.size(); ++i) {
 			int index = indexOfRemovedInstances.get(i);
 			Instance inst = instancesSet.originInstances.get(index);
-			//判断该类是否为少数类
-			if(!isMinorityClass(inst)) {
-				//如果不为少数类就进行移除
+			// 判断该类是否为少数类
+			if (!isMinorityClass(inst)) {
+				// 如果不为少数类就进行移除
 				handledInstances.remove(inst);
 			}
 		}
 	}
 
+	/*
+	 * 加入了多分类框架后的采样
+	 */
+	public void overSampling(Instances instances, List<Instance> minority, List<Instance> majority) {
+		List<List<Instance>> output = new ArrayList<List<Instance>>();
+		// 当少数类样本的K值少于等于设定的K值，则需要重新调整K值
+		int tempK = setting.K;
+		if (minority.size() <= tempK) {
+			setting.K = minority.size() - 1;
+		}
+		for (int i = 0; i < setting.K; ++i) {
+			List<Instance> temp = allHandledInstances.get(i);
+			temp.clear();
+			List<Instance> tempOutput = new ArrayList<>();
+			output.add(tempOutput);
+		}
+		// 计算需要合成少数类样本的数量
+		int[] n = calInstanceToGenerate(minority, majority.size());
+		// 对少数类进行采样
+		
+		// 将List类型的minority和majority转换为Instances类型
+		Instances minorityInstances = new Instances(instancesSet.rawInstances);
+		minorityInstances.clear();
+		for (Instance inst : minority) {
+			minorityInstances.add(inst);
+		}
+		Instances majorityInstances = new Instances(instancesSet.rawInstances);
+		majorityInstances.clear();
+		for (Instance inst : majority) {
+			majorityInstances.add(inst);
+		}
+		GenerateSample generateSample = new GenerateSample(setting);
+		for (int i = 0; i < n.length; ++i) {
+			Instance inst = instancesSet.originInstances.get(i);
+			if (n[i] <= 0) {
+				continue;
+			}
+			generateSample.generateSample(inst, minorityInstances, majorityInstances, output, n[i]);
+		}
+		
+		// 将生成的样本加入到handleInstances中
+		for (int i = 0; i < setting.K; ++i) {
+			for (Instance inst : handledInstances) {
+				allHandledInstances.get(i).add(inst);
+			}
+			for (Instance inst : output.get(i)) {
+//						handledInstances.add(inst);
+				allHandledInstances.get(i).add(inst);
+			}
+		}
+		setting.K = tempK;
+		/*
+		//采样结束
+		System.out.println("采样结束");
+		//对总体样本进行拆分，检查样本是否平衡
+		List<Instance> list = allHandledInstances.get(0);
+		int cnt1 = 0, cnt0 = 0;
+		for(Instance inst: list) {
+			int label = (int)inst.classValue();
+			if(label == 1) {
+				cnt1++;
+			}else {
+				cnt0++;
+			}
+		}
+		System.out.println(cnt1+" "+cnt1);
+		*/
+	}
 
 	/*
 	 * TODO: 对样本进行过采样 RETURN: 将生成的样本加入到handledInstances中
@@ -240,13 +310,11 @@ public class Individual implements Serializable {
 			output.add(tempOutput);
 		}
 		// 计算少数类样本的个数和多数类样本的个数
-
 		int numClass = instancesSet.rawInstances.numClasses();
 
 		// 1. 首先将所有样本按照类标进行拆分，此时存储所有样本的对象为handledInstances
 		instancesByClass = splitByClass();
-		
-		
+
 		// 求出类别中数量最多的类别的样本
 		int max = 0;
 		for (int i = 0; i < numClass; ++i) {
@@ -258,17 +326,21 @@ public class Individual implements Serializable {
 		// 2. 对每一个少数类进行过采样
 		for (int classValue = 0; classValue < numClass; classValue++) {
 			List<Instance> instances = instancesByClass.get(classValue);
-			// 2. 如果少数类样本多于平均的样本数量，那么就不需要进行过采样
-			if (instances.size() >= max) {
+
+			if (instances.size() == 0) {
+				continue;
+			} // 如果某一类样本的数量为0，则表明该类别没够划分到二分类数据集中
+			// 2. 如果该类为多数类样本，那么就不需要进行过采样
+			if (instances.size() == max) {
 				continue;
 			}
-			//如果当前少数类样本数量小于设定的K值，那么将K值设置为少数类样本数量-1
-			//并且在进行采样后将K值复原
+			// 如果当前少数类样本数量小于设定的K值，那么将K值设置为少数类样本数量-1
+			// 并且在进行采样后将K值复原
 			int tempK = setting.K;
-			if(instancesByClass.get(classValue).size() <= setting.K) {
-				setting.K = instancesByClass.get(classValue).size()-1;
+			if (instancesByClass.get(classValue).size() <= setting.K) {
+				setting.K = instancesByClass.get(classValue).size() - 1;
 			}
-			// 2.2 根据个体的flag筛选结果计算少选后的少数类进行欠采样的个数（不需要欠采样的样本值为0，反之不为0）
+			// 2.2 根据个体的flag筛选结果计算筛选后的少数类进行欠采样的个数（不需要欠采样的样本值为0，反之不为0）
 			int[] n = calInstanceToGenerate(instances, max);
 			/*
 			 * //2.3 根据当前经过欠采样后的样本进行计算类别间距 Map<Integer, Double> instancesOfMargin =
@@ -291,8 +363,10 @@ public class Individual implements Serializable {
 			Instances minority = new Instances(instancesSet.rawInstances);
 			minority.clear();
 			for (Instance inst : handledInstances) {
-				int  label = (int)inst.classValue();
-				if(classValue != label) {continue;}
+				int label = (int) inst.classValue();
+				if (classValue != label) {
+					continue;
+				}
 				minority.add(inst);
 			}
 			GenerateSample generateSample = new GenerateSample(setting);
@@ -443,12 +517,12 @@ public class Individual implements Serializable {
 	/*
 	 * TODO: 计算每个少数类需要生成的样本数 RETURN： 每个样本的近邻数组
 	 */
-	public int[] calInstanceToGenerate(List<Instance> minority, int average) {
+	public int[] calInstanceToGenerate(List<Instance> minority, int majoritySize) {
 
 		int classLabel = (int) minority.get(0).classValue();
 		int minoritySize = minority.size();
 		int[] n = new int[instancesSet.originInstances.size()];
-		int generatesize = average - minoritySize;
+		int generatesize = majoritySize - minoritySize;
 		List<Instance> instancesToOverSampling = new ArrayList<>();
 		// 1. 将需要过采样的样本的下标记录到instancesToOverSampling,并统计其个数
 		for (int i = 0; i < flag.length; ++i) {
@@ -463,15 +537,17 @@ public class Individual implements Serializable {
 			if (flag[i] == 1) {
 				Instance inst = instancesSet.originInstances.get(i);
 				if ((int) inst.classValue() == classLabel) {
-					if(instancesToOverSampling.size()!=0) {
+					if (instancesToOverSampling.size() != 0) {
 						n[i] = generatesize / instancesToOverSampling.size();
-					}else {
+					} else {
 						n[i] = 0;
 					}
 				}
 			}
 		}
-		if(instancesToOverSampling.size() == 0) {return n;}
+		if (instancesToOverSampling.size() == 0) {
+			return n;
+		}
 		int reminder = generatesize % instancesToOverSampling.size();
 		// println(minoritySamples.size());
 		for (int i = 0; i < reminder;) {
@@ -554,35 +630,33 @@ public class Individual implements Serializable {
 		return desObject;
 	}
 
-	
 	/*
-	 * TODO: 判断一个样本是否属于少数类
-	 * RETURN： 如果该样本为少数类，那么就返回true, 否则返回false
-	 * */
-	
+	 * TODO: 判断一个样本是否属于少数类 RETURN： 如果该样本为少数类，那么就返回true, 否则返回false
+	 */
+
 	public boolean isMinorityClass(Instance inst) {
-		//求得整个数据集的平均样本个数
+		// 求得整个数据集的平均样本个数
 		int average = 0;
-		for(int i = 0; i < instancesByClass.size(); ++i) {
+		for (int i = 0; i < instancesByClass.size(); ++i) {
 			average += instancesByClass.get(i).size();
 		}
 		average /= inst.numClasses();
-		int classLabel = (int)inst.classValue();
-		if(instancesByClass.get(classLabel).size() < average*0.75) {
+		int classLabel = (int) inst.classValue();
+		if (instancesByClass.get(classLabel).size() < average * 0.75) {
 			return true;
 		}
 		return false;
 	}
-	
+
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
-		Enum_Classifier classifier = Enum_Classifier.C45;
-		Setting setting = new Setting(4, 10, classifier);
-		InstancesSet instancesSet = new InstancesSet("pima", setting);
-		instancesSet.initializeInstancesSet(0);
-		Individual individual = new Individual(setting, instancesSet);
-		individual.initializeIndividual();
-		individual.watchByPhase();
-		individual.mixedSampling();
+		/*
+		 * Enum_Classifier classifier = Enum_Classifier.C45; Setting setting = new
+		 * Setting(4, 10, classifier); InstancesSet instancesSet = new
+		 * InstancesSet("pima", setting); instancesSet.initializeInstancesSet(0);
+		 * Individual individual = new Individual(setting, instancesSet);
+		 * individual.initializeIndividual(); individual.watchByPhase();
+		 * individual.mixedSampling();
+		 */
 	}
 }

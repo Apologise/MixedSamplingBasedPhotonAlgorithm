@@ -242,6 +242,7 @@ public class QuantumModel {
 		System.out.println(direction[0]);
 		return ;
 		*/
+		/*
 		String[] dataSets = { "glass1", "pima", "glass0", "yeast1", "vehicle1", "glass0123vs456", "ecoli1",
 				"newthyroid1", "newthyroid2", "ecoli2", "glass6", "yeast3", "ecoli3", "glass016v2", "yeast1v7",
 				"glass4", "glass5", "yeast2v8", "yeast4", "yeast6" };
@@ -274,6 +275,7 @@ public class QuantumModel {
 //			System.out.println("最终的最优结果为：" + maxFitness / 5);
 		}
 		fw.close();
+		*/
 	}
 }
 
