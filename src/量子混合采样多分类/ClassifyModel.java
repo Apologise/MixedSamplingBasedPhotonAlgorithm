@@ -1,6 +1,7 @@
 package 量子混合采样多分类;
 
 import java.io.FileWriter;
+import java.nio.channels.SeekableByteChannel;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -21,10 +22,12 @@ import weka.classifiers.trees.J48;
 import weka.clusterers.SimpleKMeans;
 import weka.core.Instance;
 import weka.core.Instances;
+import weka.core.SelectedTag;
 import weka.core.Settings;
 import weka.core.Utils;
 import weka.filters.Filter;
 import weka.filters.supervised.attribute.ClassOrder;
+import weka.filters.supervised.instance.SMOTE;
 import weka.filters.unsupervised.attribute.Normalize;
 import weka.filters.unsupervised.attribute.Remove;
 
@@ -49,17 +52,21 @@ public class ClassifyModel {
 	public List<Integer> globalClassOrder;
 	public List<Integer> currentClassOrder;
 	public int DK;
-	public Vote vote = null;
+	public Classifier classifier = null;
+	public InstancesSet instancesSet;
+	public Setting setting;
 
 	/*
 	 * trian为已经经过混合采样后的数据集 test为验证集合
 	 */
-	public ClassifyModel(List<Instance> train, Instances test, Enum_Classifier classfier) throws Exception {
+	public ClassifyModel(List<Instance> train, Instances test, Enum_Classifier classfier, InstancesSet instancesSet, Setting setting) throws Exception {
 		m_train = train;
 		m_test = test;
 		flag = new int[m_test.size()];
 		cls = classfier;
 		DK = Setting.KDistance;
+		this.instancesSet = instancesSet;
+		this.setting = setting;
 		/*
 		 * normalizeInstancesTest = new Instances(m_test);
 		 * normalizeInstancesTest.clear(); normalizeInstancesTrain= new
@@ -97,18 +104,74 @@ public class ClassifyModel {
 			}
 			// 如果数据集为非平衡数据集，那么对该数据集进行平衡采样
 			//计算数据集中的非平衡率，然后但非平衡率较大时，则进行混合采样
-			vote = null;
-			mixedSamplingByImbalanceRatio(trainInstances);
-			if(vote != null) {
-				Evaluation eval = new Evaluation(trainInstances);
-				predictionLabel = (int) eval.evaluateModelOnce(vote, testInstance);
-			}else {
-			// 对测试集进行训练
-				Classifier classifier = chooseClassifier(cls);
-				classifier.buildClassifier(trainInstances);
-				Evaluation evaluation = new Evaluation(trainInstances);
-				predictionLabel = (int) evaluation.evaluateModelOnce(classifier, testInstance);
+			classifier = null;
+			//mixedSamplingByImbalanceRatio(trainInstances);
+			List<Instance> minority = new ArrayList<>();
+			List<Instance> majority = new ArrayList<>();
+			for(Instance inst: instances) {
+				int label = (int)inst.classValue();
+				if(label == 0) {
+					minority.add(inst);
+				}else {
+					majority.add(inst);
+				}
 			}
+			//统计两个类别之间的个数
+			int minoritySize = minority.size();
+			int majoritySize = majority.size();
+			double IR;
+			//如果少数样本集合的个数少于多数样本集合，那么将两个集合进行交换
+			if(minoritySize > majoritySize) {
+				List<Instance> temp = new ArrayList<>(minority);
+				minority.clear();
+				for(Instance inst : majority) {
+					minority.add(inst);
+				}
+				majority.clear();
+				for(Instance inst: temp) {
+					majority.add(inst);
+				}
+				temp = null; //有助于垃圾回收
+				minoritySize = minority.size();
+				majoritySize = majority.size();
+				System.out.println("多数类样本个数为："+majoritySize);
+				System.out.println("少数类样本个数为："+minoritySize);
+			}
+			int tempK = setting.K;
+			if(setting.K >= minoritySize) {
+				setting.K = minoritySize-1;
+			}
+			
+			List<List<Instance>> output = overSamplingByLADBMOTE(trainInstances, minority, majority);
+			
+			setting.K = tempK;
+			Instances[] instancesList = new Instances[output.size()];
+			for(int i = 0; i < output.size(); ++i) {
+				instancesList[i] = new Instances(trainInstances);
+				instancesList[i].addAll(output.get(i));
+			}
+			Classifier[] classifiers = new Classifier[output.size()];
+			for(int i = 0; i < output.size(); ++i) {
+				classifiers[i] = chooseClassifier(cls);
+				classifiers[i].buildClassifier(instancesList[i]);
+				List<Instance> minority1 = new ArrayList<>();
+				List<Instance> majority1 = new ArrayList<>();
+				for(Instance inst: instancesList[i]) {
+					int label = (int)inst.classValue();
+					if(label == 0) {
+						minority1.add(inst);
+					}else {
+						majority1.add(inst);
+					}
+				}
+				System.out.println("多数类样本"+minority1.size()+"少数类样本"+majority1.size());
+			}
+			Vote ensemble = new Vote();
+			SelectedTag tag = new SelectedTag(Vote.AVERAGE_RULE, Vote.TAGS_RULES);
+			ensemble.setCombinationRule(tag);
+			ensemble.setClassifiers(classifiers);
+			Evaluation evaluation = new Evaluation(trainInstances);
+			predictionLabel = (int) evaluation.evaluateModelOnce(ensemble, testInstance);
 			int size = classLabel.size();
 			if (predictionLabel == 0) {// 如果预测为正类，那么将classLabel中的负类类标移除
 				for (int i = size - 1; i >= (size + 1) / 2; --i) {
@@ -159,12 +222,12 @@ public class ClassifyModel {
 		IR = majoritySize/minoritySize;
 		if(IR >= 1.5) {
 			//当非平衡率超过1.5时，进行混合采样
-			vote =  mixedSamplingByQuantumModel(instances, minority, majority);
+			classifier =  mixedSamplingByQuantumModel(instances, minority, majority);
 		}
 	}
 	
-	public Vote mixedSamplingByQuantumModel(Instances instances, List<Instance> minority, List<Instance> majority) throws Exception {
-		Setting setting = new Setting(10, 100, cls);
+	public Classifier mixedSamplingByQuantumModel(Instances instances, List<Instance> minority, List<Instance> majority) throws Exception {
+		Setting setting = new Setting(10, 200, cls);
 		InstancesSet instancesSet = new InstancesSet(instances, setting);
 		instancesSet.initializeInstancesSet();
 		instancesSet.minority = minority;
@@ -174,9 +237,55 @@ public class ClassifyModel {
 			quantumModel.run();
 			//取出最优
 			Individual best = quantumModel.gBestIndividual;
-			return best.vote;
+			return best.cls;
 		
 	}	
+	
+	public List<List<Instance>> overSamplingByLADBMOTE(Instances instances, List<Instance> minority, List<Instance> majority) {
+		List<List<Instance>> output = new ArrayList<List<Instance>>();
+		// 当少数类样本的K值少于等于设定的K值，则需要重新调整K值
+		int tempK = setting.K;
+		if (minority.size() <= tempK) {
+			setting.K = minority.size() - 1;
+		}
+		for(int i = 0; i < setting.K; ++i) {
+			List<Instance> list = new ArrayList<>();
+			output.add(list);
+		}
+		
+		// 计算需要合成少数类样本的数量
+		int[] n = new int[minority.size()];
+		int IR = (majority.size()-minority.size())/minority.size();
+		for(int i = 0; i < minority.size(); ++i) {
+			n[i] = IR;
+		}
+		int reminder = (majority.size()-minority.size()) - IR*minority.size();
+		for(int i = 0; i < reminder; ++i) {
+			double rand = Math.random();
+			int index =(int) (rand*minority.size());
+			n[index] += 1;
+		}
+		Instances minorityInstances = new Instances(instancesSet.rawInstances);
+		minorityInstances.clear();
+		for (Instance inst : minority) {
+			minorityInstances.add(inst);
+		}
+		Instances majorityInstances = new Instances(instancesSet.rawInstances);
+		majorityInstances.clear();
+		for (Instance inst : majority) {
+			majorityInstances.add(inst);
+		}
+		GenerateSample generateSample = new GenerateSample(setting);
+		for(int i = 0; i < minority.size(); ++i) {
+			generateSample.generateSample(minority.get(i), minorityInstances, majorityInstances, output, n[i]);
+		}
+		setting.K = tempK;
+		return output;
+	}
+	
+	/*
+	 * 根据采样的结果，对样本继续进行分类测试
+	 * */
 	/*
 	 * 根据累到的类标，对数据集进行拆分,，构成一个二分类数据集
 	 */
@@ -540,30 +649,27 @@ public class ClassifyModel {
 				"penbasedMulti", "shuttleMulti", "thyroidMulti", "wineMulti", "yeastMulti", "vowelMulti",
 				"vehicleMulti", "taeMulti", "segmentMulti" };
 		int[] K = {13,7,13,3,5,5,3,5,3,3,3,3,3,5,3,3,3,5,6};
-		FileWriter fw = new FileWriter("实验结果/多分类框架实验结果/测试分类框架结果.dat", true);
-		for (int set = 0; set <= 0; ++set) {
+		FileWriter fw = new FileWriter("实验结果/多分类框架实验结果+MOLAD/测试分类框架结果.dat", true);
+		for (int set = 10; set < 15; ++set) {
+			fw.write(""+dataSets[set]+":");
 			Setting.KDistance = K[set];
 			double averageAccuacy = 0.0;
-			for (int fold = 0; fold <=  0; ++fold) {
+			for (int fold = 0; fold <= 0; ++fold) {
 	//			System.out.println("当前数据集为" + dataSets[set]);
-				
-				
 				String[] trainPath = Dataset.chooseDataset(dataSets[set], 0);
 				String[] testPath = Dataset.chooseDataset(dataSets[set], 1);
 				Instances rawInstances = dao.loadDataFromFile(trainPath[fold]);
 				Instances testInstances = dao.loadDataFromFile(testPath[fold]);
-
 				List<Instance> trainInstances = new ArrayList<>();
 				for (int i = 0; i < rawInstances.size(); ++i) {
 					trainInstances.add(rawInstances.get(i));
 				}
 				
 				int cnt = 0;
-			
-				
+				Setting setting = new Setting(10, 100, Enum_Classifier.C45);
+				InstancesSet instancesSet = new InstancesSet(rawInstances, setting);
 				for (Instance testInstance : testInstances) {
-					ClassifyModel clsModel = new ClassifyModel(trainInstances, testInstances,
-							Enum_Classifier.C45);
+					ClassifyModel clsModel = new ClassifyModel(trainInstances, testInstances,Enum_Classifier.C45,instancesSet, setting);
 				System.out.println("样本的真实类标为" + (int) testInstance.classValue());
 					int label = clsModel.classifySingleInstance(testInstance);
 				System.out.println("样本的预测类标为" + label);
@@ -575,8 +681,8 @@ public class ClassifyModel {
 				
 				averageAccuacy += cnt * 1.0 / testInstances.size();
 			}
-			System.out.print(String.format("%.3f", averageAccuacy/5)+" ");
-			fw.write(String.format("%.3f", averageAccuacy/5));
+			System.out.print(String.format("%.3f", averageAccuacy)+" ");
+			fw.write(String.format("%.3f", averageAccuacy)+"\n");
 			/*
 			 * for (int DK = 3; DK < 20; ++DK) { int cnt2 = 0; int cnt3 = 0; int cnt4 = 0;
 			 * for (Instance inst : validationInstances) { List<Integer>

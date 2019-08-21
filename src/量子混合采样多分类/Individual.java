@@ -38,8 +38,8 @@ public class Individual implements Serializable {
 	public InstancesSet instancesSet;
 	public Instances handledMajorityInstances;
 	public List<List<Instance>> instancesByClass;
-	public List<List<Instance>> allHandledInstances;
-	public Vote vote;
+	public List<Instance> allHandledInstances;
+	public Classifier cls;
 
 	public Individual(Setting setting, InstancesSet instancesSet) {
 		this.setting = setting;
@@ -60,11 +60,7 @@ public class Individual implements Serializable {
 		handledMajorityInstances = new Instances(instancesSet.rawInstances);
 		handledMajorityInstances.clear();
 		// 初始化allHanledInstance;
-		allHandledInstances = new ArrayList<List<Instance>>();
-		for (int i = 0; i < setting.K; ++i) {
-			List<Instance> list = new ArrayList<Instance>();
-			allHandledInstances.add(list);
-		}
+		allHandledInstances = new ArrayList<Instance>();
 
 	}
 
@@ -85,26 +81,23 @@ public class Individual implements Serializable {
 	 */
 	public void calFitness(Enum_Classifier cls) throws Exception {
 		// 使用集成规则来聚类
-		Classifier[] classifier = new Classifier[setting.K];
-		for (int i = 0; i < setting.K; ++i) {
+		Classifier classifier;
+
 			Instances newInstances = new Instances(instancesSet.rawInstances);
 			newInstances.clear();
 			// 将handledInstances全部加入到newInstances中
-			for (Instance inst : allHandledInstances.get(i)) {
+			for (Instance inst : allHandledInstances) {
 				newInstances.add(inst);
 			}
-			classifier[i] = chooseClassifier(cls);
-			classifier[i].buildClassifier(newInstances);
-		}
-		Vote ensemble = new Vote();
-		SelectedTag tag = new SelectedTag(Vote.AVERAGE_RULE, Vote.TAGS_RULES);
-		ensemble.setCombinationRule(tag);
-		ensemble.setClassifiers(classifier);
+			classifier = chooseClassifier(cls);
+			classifier.buildClassifier(newInstances);
+		
+		
 		// 测试
 		Evaluation eval = new Evaluation(instancesSet.validateInstances);
-		eval.evaluateModel(ensemble, instancesSet.validateInstances);
+		eval.evaluateModel(classifier, instancesSet.validateInstances);
 		//保存当前评估器
-		this.vote = ensemble;
+		this.cls = classifier;
 		fitness = eval.areaUnderROC(0);
 	}
 
@@ -112,6 +105,7 @@ public class Individual implements Serializable {
 	 * TODO: 计算最终的分类值
 	 * 
 	 */
+	/*
 	public double calAUC(Enum_Classifier cls) throws Exception {
 		// 使用集成规则来聚类
 		Classifier[] classifier = new Classifier[setting.K];
@@ -133,17 +127,11 @@ public class Individual implements Serializable {
 		Evaluation eval = new Evaluation(instancesSet.testInstances);
 		eval.evaluateModel(ensemble, instancesSet.testInstances);
 		return eval.areaUnderROC(0);
-		/*
-		 * //利用handledInstances进行分类实验 Instances newInstances = new
-		 * Instances(instancesSet.rawInstances); newInstances.clear();
-		 * //将handledInstances全部加入到newInstances中 for(Instance inst: handledInstances) {
-		 * newInstances.add(inst); } Classifier classifier = chooseClassifier(cls);
-		 * classifier.buildClassifier(newInstances); Evaluation evaluation = new
-		 * Evaluation(newInstances); evaluation.evaluateModel(classifier,
-		 * instancesSet.testInstances); return evaluation.areaUnderROC(0)
-		 */
+		
 
 	}
+	*/
+	
 
 	public double calAUC1(Enum_Classifier cls) throws Exception {
 		// 利用handledInstances进行分类实验
@@ -152,7 +140,7 @@ public class Individual implements Serializable {
 			Instances newInstances = new Instances(instancesSet.rawInstances);
 			newInstances.clear();
 			// 将handledInstances全部加入到newInstances中
-			for (Instance inst : allHandledInstances.get(i)) {
+			for (Instance inst : allHandledInstances) {
 				newInstances.add(inst);
 			}
 			Classifier classifier = chooseClassifier(cls);
@@ -228,23 +216,54 @@ public class Individual implements Serializable {
 			}
 		}
 	}
-
-	/*
-	 * 加入了多分类框架后的采样
-	 */
-	public void overSampling(Instances instances, List<Instance> minority, List<Instance> majority) {
-		List<List<Instance>> output = new ArrayList<List<Instance>>();
+	
+	public void overSamplingByLADBMOTE(Instances instances, List<Instance> minority, List<Instance> majority) {
+		List<Instance> output = new ArrayList<Instance>();
 		// 当少数类样本的K值少于等于设定的K值，则需要重新调整K值
 		int tempK = setting.K;
 		if (minority.size() <= tempK) {
 			setting.K = minority.size() - 1;
 		}
-		for (int i = 0; i < setting.K; ++i) {
-			List<Instance> temp = allHandledInstances.get(i);
-			temp.clear();
-			List<Instance> tempOutput = new ArrayList<>();
-			output.add(tempOutput);
+		output.clear();
+		// 计算需要合成少数类样本的数量
+		int[] n = new int[minority.size()];
+		int IR = majority.size()/minority.size();
+		for(int i = 0; i < minority.size(); ++i) {
+			n[i] = IR;
 		}
+		int reminder = majority.size() - IR*minority.size();
+		for(int i = 0; i < reminder; ++i) {
+			double rand = Math.random();
+			int index =(int) rand*minority.size();
+			n[index] += 1;
+		}
+		Instances minorityInstances = new Instances(instancesSet.rawInstances);
+		minorityInstances.clear();
+		for (Instance inst : minority) {
+			minorityInstances.add(inst);
+		}
+		Instances majorityInstances = new Instances(instancesSet.rawInstances);
+		majorityInstances.clear();
+		for (Instance inst : majority) {
+			majorityInstances.add(inst);
+		}
+		GenerateSample generateSample = new GenerateSample(setting);
+		for(int i = 0; i < minority.size(); ++i) {
+			generateSample.generateSample(minority.get(i), minorityInstances, majorityInstances, output, n[i]);
+		}
+	}
+	/*
+	 * 加入了多分类框架后的采样
+	 */
+	public void overSampling(Instances instances, List<Instance> minority, List<Instance> majority) {
+		List<Instance> output = new ArrayList<Instance>();
+		// 当少数类样本的K值少于等于设定的K值，则需要重新调整K值
+		int tempK = setting.K;
+		if (minority.size() <= tempK) {
+			setting.K = minority.size() - 1;
+		}
+		allHandledInstances.clear();
+		output.clear();
 		// 计算需要合成少数类样本的数量
 		int[] n = calInstanceToGenerate(minority, majority.size());
 		// 对少数类进行采样
@@ -272,11 +291,11 @@ public class Individual implements Serializable {
 		// 将生成的样本加入到handleInstances中
 		for (int i = 0; i < setting.K; ++i) {
 			for (Instance inst : handledInstances) {
-				allHandledInstances.get(i).add(inst);
+				allHandledInstances.add(inst);
 			}
-			for (Instance inst : output.get(i)) {
+			for (Instance inst : output) {
 //						handledInstances.add(inst);
-				allHandledInstances.get(i).add(inst);
+				allHandledInstances.add(inst);
 			}
 		}
 		setting.K = tempK;
@@ -301,14 +320,10 @@ public class Individual implements Serializable {
 	/*
 	 * TODO: 对样本进行过采样 RETURN: 将生成的样本加入到handledInstances中
 	 */
+	/*
 	public void overSampling() {
-		List<List<Instance>> output = new ArrayList<List<Instance>>();
-		for (int i = 0; i < setting.K; ++i) {
-			List<Instance> temp = allHandledInstances.get(i);
-			temp.clear();
-			List<Instance> tempOutput = new ArrayList<>();
-			output.add(tempOutput);
-		}
+		List<Instance> output = new ArrayList<Instance>();
+		
 		// 计算少数类样本的个数和多数类样本的个数
 		int numClass = instancesSet.rawInstances.numClasses();
 
@@ -342,17 +357,7 @@ public class Individual implements Serializable {
 			}
 			// 2.2 根据个体的flag筛选结果计算筛选后的少数类进行欠采样的个数（不需要欠采样的样本值为0，反之不为0）
 			int[] n = calInstanceToGenerate(instances, max);
-			/*
-			 * //2.3 根据当前经过欠采样后的样本进行计算类别间距 Map<Integer, Double> instancesOfMargin =
-			 * calMargin(); //2.4 针对instanceOfMargin进行过采样
-			 * 
-			 * for(Entry<Integer, Double> entry: instancesOfMargin.entrySet()) { Instance
-			 * instTemp = handledInstances.get(entry.getKey());
-			 * //根据inst来获取在originInstances中的下标 int index =
-			 * instancesSet.originInstances.indexOf(instTemp); for(int i = 0; i < n[index];
-			 * ++i) { Instance inst = generateSample(entry, classValue); output.add(inst); }
-			 * }
-			 */
+			
 			Instances majority = new Instances(instancesSet.rawInstances);
 			majority.clear();
 			for (int i = 0; i < handledInstances.size(); ++i) {
@@ -381,17 +386,17 @@ public class Individual implements Serializable {
 
 		}
 		// 将生成的样本加入到handleInstances中
-		for (int i = 0; i < setting.K; ++i) {
+		
 			for (Instance inst : handledInstances) {
-				allHandledInstances.get(i).add(inst);
+				allHandledInstances.add(inst);
 			}
-			for (Instance inst : output.get(i)) {
+			for (Instance inst : output) {
 //				handledInstances.add(inst);
-				allHandledInstances.get(i).add(inst);
+				allHandledInstances.add(inst);
 			}
-		}
+		
 	}
-
+*/
 	/*
 	 * TODO: 根据样本的Margin生成一个样本 Entry<Integer, Double> entry:
 	 * Integer为样本的下标，Double为对应样本的安全间距， classValue为当前采样类的类标 RETURN: 返回一个生成的样本
